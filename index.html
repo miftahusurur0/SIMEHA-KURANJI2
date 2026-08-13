@@ -471,7 +471,7 @@
   </section>
 </div>
 
-<footer>Pindai QR di mading sekolah untuk melihat halaman ini</footer>
+<footer>Pindai QR untuk melihat menu harian SPPG KOTA SERANG TAKTAKAN KURANJI 2 © 2026</footer>
 
 <!-- ============ MODAL: LOGIN ============ -->
 <div class="modal-overlay" id="loginModal">
@@ -607,7 +607,7 @@
      meminta login Google dan menyebabkan error "Server tidak membalas JSON".
    - Gunakan SELALU URL dari "Manage deployments" yang berakhiran /exec.
    ========================================================= */
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyiaKzxwNUNiHRahfLkxUIIf0lS6zygS5uDqverDfi_1WcKTMfy8hMHfUWQKEF373k/exec'; // Contoh: 'https://script.google.com/macros/s/xxxxx/exec'
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbygt_EjB38Lw68QtHfhzlMSKPsDk6l40obTFoL4Vihxz7QC47y6g7p6KrOnMSW1HRpO/exec'; // Contoh: 'https://script.google.com/macros/s/xxxxx/exec'
 
 const MAX_GAMBAR = 3;
 const MAX_VIDEO_DURATION = 15;
@@ -728,9 +728,43 @@ function renderGiziTable(container, portionData){
   container.appendChild(table);
 }
 
+/* ---------------- helpers: resolve gambar ---------------- */
+/* File ID dari Drive tidak bisa langsung jadi src <img>.
+   Fungsi ini mendeteksi file ID, lalu mengambil data URL dari server. */
+function resolveImages(imageSources){
+  if(!imageSources || !imageSources.length) return Promise.resolve([]);
+  var needsFetch = imageSources.some(function(s){ return s && s.indexOf('data:') !== 0 && s.indexOf('http') !== 0; });
+  if(!needsFetch) return Promise.resolve(imageSources.filter(Boolean));
+
+  var promises = imageSources.map(function(src){
+    if(!src) return Promise.resolve(null);
+    if(src.indexOf('data:') === 0 || src.indexOf('http') === 0) return Promise.resolve(src);
+    // File ID — ambil data gambar dari server
+    return apiCall({ action:'fetchimage', file_id: src })
+      .then(function(res){ return (res.success && res.dataUrl) ? res.dataUrl : null; })
+      .catch(function(){ return null; });
+  });
+  return Promise.all(promises).then(function(results){ return results.filter(Boolean); });
+}
+
 /* ---------------- render: slideshow ---------------- */
 function renderSlideshow(container, images, altBase){
   if(!images || !images.length){ return; }
+
+  // Tampilkan loading sementara gambar diambil dari Drive
+  var loadingEl = document.createElement('div');
+  loadingEl.className = 'slideshow';
+  loadingEl.innerHTML = '<div class="slide-viewport" style="min-height:200px;display:flex;align-items:center;justify-content:center;"><p class="empty-note">Memuat gambar…</p></div>';
+  container.appendChild(loadingEl);
+
+  resolveImages(images).then(function(resolved){
+    loadingEl.remove();
+    if(!resolved.length) return;
+    renderSlideshowCore(container, resolved, altBase);
+  });
+}
+
+function renderSlideshowCore(container, images, altBase){
   let idx = 0;
   let isTransitioning = false;
   const el = document.createElement('div');
@@ -746,26 +780,13 @@ function renderSlideshow(container, images, altBase){
   container.appendChild(el);
 
   const imgEl = el.querySelector('.slide-img');
-
-  // Fallback gambar: jika URL utama gagal, coba URL thumbnail
-  function handleImgError(){
-    if(!this.dataset.triedFallback){
-      this.dataset.triedFallback = '1';
-      const m = this.src.match(/\/d\/([a-zA-Z0-9_-]+)/);
-      if(m) this.src = 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1600';
-      else this.style.display = 'none';
-    } else {
-      this.style.display = 'none';
-    }
-  }
-  imgEl.onerror = handleImgError;
+  imgEl.onerror = function(){ this.style.display = 'none'; };
 
   if(images.length <= 1) return;
 
   const countEl = el.querySelector('.slide-count');
   const dots = el.querySelectorAll('.dot');
 
-  // Preload semua gambar agar slideshow mulus
   images.forEach((src, i) => {
     if(i === 0) return;
     const preload = new Image();
@@ -786,7 +807,6 @@ function renderSlideshow(container, images, altBase){
         imgEl.style.opacity = '1';
         isTransitioning = false;
       };
-      // Fallback jika gambar sudah di-cache (onload tidak trigger)
       setTimeout(() => { imgEl.style.opacity = '1'; isTransitioning = false; }, 300);
     }, 150);
   }
@@ -794,7 +814,6 @@ function renderSlideshow(container, images, altBase){
   el.querySelector('.next').addEventListener('click', () => show(idx+1));
   dots.forEach(d => d.addEventListener('click', () => show(Number(d.dataset.i))));
 
-  // Touch/swipe support untuk mobile
   let touchStartX = 0;
   let touchEndX = 0;
   const viewport = el.querySelector('.slide-viewport');
