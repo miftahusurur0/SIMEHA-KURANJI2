@@ -118,7 +118,17 @@
   .menu-card{
     background:var(--paper); border-radius:var(--radius); box-shadow:var(--shadow);
     padding:26px 26px 24px; margin-bottom:18px; border:1px solid var(--line);
+    position:relative;
   }
+  .admin-delete-btn{
+    position:absolute; top:12px; right:12px;
+    background:var(--c-protein); color:#fff; border:none;
+    font-family:var(--font-body); font-size:12px; font-weight:700;
+    padding:6px 14px; border-radius:999px; cursor:pointer;
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  .admin-delete-btn:hover{ opacity:.88; transform:scale(1.04); }
+  .admin-delete-btn:focus-visible{ outline:2px solid var(--c-protein); outline-offset:2px; }
   .menu-date{ font-family:var(--font-mono); font-size:12px; color:var(--ink-faint); letter-spacing:.06em; margin-bottom:10px; }
   .menu-name{
     font-family:var(--font-display); font-style:italic; font-weight:600;
@@ -250,6 +260,14 @@
   }
   .hist-badge.aktif{background:var(--c-karbo); color:#fff;}
   .hist-rating{ font-family:var(--font-mono); font-size:11px; color:var(--c-lemak); white-space:nowrap; }
+  .hist-delete-btn{
+    background:var(--c-protein); color:#fff; border:none; font-size:13px;
+    width:26px; height:26px; border-radius:50%; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition: transform .15s ease, opacity .15s ease;
+  }
+  .hist-delete-btn:hover{ transform:scale(1.15); opacity:.88; }
+  .hist-delete-btn:disabled{ background:var(--line); color:var(--ink-faint); cursor:not-allowed; transform:none; opacity:.6; }
 
   /* ================= MODAL ================= */
   .modal-overlay{
@@ -589,7 +607,7 @@
      meminta login Google dan menyebabkan error "Server tidak membalas JSON".
    - Gunakan SELALU URL dari "Manage deployments" yang berakhiran /exec.
    ========================================================= */
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbycAnb9sGJr9aAsCUDnBzMY09qEZx6KKO_1oPq0gtO3_VAreDm7oZsFShRDnTpNk_0/exec'; // Contoh: 'https://script.google.com/macros/s/xxxxx/exec'
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyiaKzxwNUNiHRahfLkxUIIf0lS6zygS5uDqverDfi_1WcKTMfy8hMHfUWQKEF373k/exec'; // Contoh: 'https://script.google.com/macros/s/xxxxx/exec'
 
 const MAX_GAMBAR = 3;
 const MAX_VIDEO_DURATION = 15;
@@ -726,9 +744,24 @@ function renderSlideshow(container, images, altBase){
     ${images.length>1 ? `<div class="slide-dots">${images.map((_,i)=>`<button type="button" class="dot ${i===0?'active':''}" data-i="${i}"></button>`).join('')}</div>` : ''}
   `;
   container.appendChild(el);
-  if(images.length <= 1) return;
 
   const imgEl = el.querySelector('.slide-img');
+
+  // Fallback gambar: jika URL utama gagal, coba URL thumbnail
+  function handleImgError(){
+    if(!this.dataset.triedFallback){
+      this.dataset.triedFallback = '1';
+      const m = this.src.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if(m) this.src = 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1600';
+      else this.style.display = 'none';
+    } else {
+      this.style.display = 'none';
+    }
+  }
+  imgEl.onerror = handleImgError;
+
+  if(images.length <= 1) return;
+
   const countEl = el.querySelector('.slide-count');
   const dots = el.querySelectorAll('.dot');
 
@@ -782,6 +815,11 @@ function renderSlideshow(container, images, altBase){
 /* ---------------- render: menu card ---------------- */
 function renderMenuCard(dateEl, bodyEl, menu, dateLabel){
   dateEl.textContent = dateLabel;
+  // Hapus tombol hapus lama jika ada
+  const card = dateEl.parentElement;
+  const oldDel = card.querySelector('.admin-delete-btn');
+  if(oldDel) oldDel.remove();
+
   if(!menu){
     bodyEl.innerHTML = `<p class="empty-note">Belum ada menu untuk tanggal ini.</p>`;
     return;
@@ -791,6 +829,23 @@ function renderMenuCard(dateEl, bodyEl, menu, dateLabel){
     <p class="menu-desc">${menu.deskripsi || ''}</p>
     <span class="rating-inline-badge" id="ratingBadge-${menu.id}"><span class="star">★</span> Memuat…</span>
   `;
+
+  // Tombol hapus untuk admin (menu aktif)
+  if(adminUsername){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'admin-delete-btn';
+    btn.textContent = '✕ Hapus';
+    btn.title = 'Hapus menu ini';
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      if(confirm('Yakin ingin menghapus menu "' + menu.nama_menu + '"?\nData instansi dan rating terkait juga akan dihapus.')){
+        deleteMenuAction(menu.id, 0, function(){ loadToday(); });
+      }
+    });
+    card.appendChild(btn);
+  }
+
   apiCall({ action:'rating', menu_id: menu.id }).then(res => {
     const badge = document.getElementById('ratingBadge-' + menu.id);
     if(!badge) return;
@@ -944,6 +999,21 @@ function renderRating(container, menu){
   });
 }
 
+/* ---------------- admin: hapus menu ---------------- */
+function deleteMenuAction(menuId, enforceAgeDays, callback){
+  const payload = { action:'deleteMenu', id:menuId, username:adminUsername, password:adminPassword };
+  if(enforceAgeDays > 0) payload.enforce_age_days = enforceAgeDays;
+  apiCall(payload).then(res => {
+    if(res.success){
+      if(callback) callback();
+    } else {
+      alert('Gagal menghapus: ' + (res.message || 'Terjadi kesalahan.'));
+    }
+  }).catch(err => {
+    alert('Tidak dapat terhubung ke server: ' + err.message);
+  });
+}
+
 /* ---------------- load: hari ini ---------------- */
 function loadToday(){
   const dateEl = document.getElementById('menuDate');
@@ -981,24 +1051,39 @@ function loadHistory(){
 
   apiCall({ action:'history' }).then(res => {
     if(!res.success || !res.data.length){
-      listEl.innerHTML = `<p class="empty-note">Belum ada riwayat menu.</p>`;
+      listEl.innerHTML = '<p class="empty-note">Belum ada riwayat menu.</p>';
       return;
     }
     listEl.innerHTML = '';
     res.data.forEach(m => {
       const item = document.createElement('div');
       item.className = 'hist-item';
+      const canDel = adminUsername && m.can_delete;
+      const whyNot = (!m.can_delete && adminUsername) ? 'Baru bisa dihapus setelah 3 hari.' : '';
       item.innerHTML = `
-        <div>
+        <div style="flex:1;min-width:0;">
           <div class="hist-date">${fmtTanggal(m.tanggal)}</div>
           <div class="hist-name">${m.nama_menu}</div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <div style="display:flex;align-items:center;gap:8px;">
           <span class="hist-rating" id="histRating-${m.id}">★ --</span>
-          <span class="hist-badge ${m.status==='AKTIF'?'aktif':''}">${m.status}</span>
+          <span class="hist-badge">RIWAYAT</span>
+          ${adminUsername ? '<button type="button" class="hist-delete-btn" title="' + (canDel ? 'Hapus menu' : whyNot) + '"' + (canDel ? '' : ' disabled') + ' data-id="' + m.id + '">✕</button>' : ''}
         </div>
       `;
-      item.addEventListener('click', () => showHistDetail(m));
+      item.addEventListener('click', function(e){
+        if(e.target.closest('.hist-delete-btn')) return;
+        showHistDetail(m);
+      });
+      const delBtn = item.querySelector('.hist-delete-btn');
+      if(delBtn && canDel){
+        delBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          if(confirm('Yakin ingin menghapus menu "' + m.nama_menu + '" dari riwayat?')){
+            deleteMenuAction(m.id, 3, function(){ loadHistory(); });
+          }
+        });
+      }
       listEl.appendChild(item);
       // Ambil rating untuk setiap menu
       apiCall({ action:'rating', menu_id: m.id }).then(rr => {
@@ -1070,6 +1155,12 @@ document.querySelectorAll('[data-close]').forEach(el => el.addEventListener('cli
 document.querySelectorAll('.modal-overlay').forEach(ov => ov.addEventListener('click', e => { if(e.target === ov) ov.classList.remove('open'); }));
 
 document.getElementById('loginBtn').addEventListener('click', () => {
+  // Jika sudah login, langsung buka form menu
+  if(adminUsername){
+    prefillMenuForm();
+    openModal('menuModal');
+    return;
+  }
   document.getElementById('loginMsg').textContent = '';
   document.getElementById('userInput').value = '';
   document.getElementById('passInput').value = '';
@@ -1098,6 +1189,9 @@ document.getElementById('loginSubmit').addEventListener('click', () => {
     if(res.success){
       adminUsername = username; adminPassword = password;
       msg.textContent = 'Berhasil masuk.'; msg.className = 'modal-msg ok';
+      document.getElementById('loginBtn').textContent = 'Tambah Menu';
+      // Reload hari ini agar tombol hapus muncul jika ada menu aktif
+      loadToday();
       setTimeout(() => { closeModal('loginModal'); prefillMenuForm(); openModal('menuModal'); }, 400);
     } else {
       msg.textContent = res.message || 'Username atau password salah.'; msg.className = 'modal-msg err';
@@ -1109,8 +1203,11 @@ document.getElementById('loginSubmit').addEventListener('click', () => {
 
 /* ---------------- admin form: reset ---------------- */
 function prefillMenuForm(){
-  const today = new Date().toISOString().slice(0,10);
-  document.getElementById('fTanggal').value = today;
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  document.getElementById('fTanggal').value = yyyy + '-' + mm + '-' + dd;
   document.getElementById('fNama').value = '';
   document.getElementById('fDeskripsi').value = '';
   document.getElementById('fJumlahPorsi').value = '';
@@ -1144,7 +1241,7 @@ function compressImage(file, maxWidth, quality){
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const dataUrl = canvas.toDataURL('image/jpeg', quality || 0.8);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality || 0.7);
       resolve({ base64: dataUrl.split(',')[1], mime:'image/jpeg', dataUrl });
     };
     img.onerror = reject;
@@ -1178,7 +1275,7 @@ function bindGalleryInput(portion){
       document.getElementById('galleryHint' + cap(portion)).textContent = `Hanya ${MAX_GAMBAR} foto yang bisa disimpan — sebagian foto diabaikan.`;
     }
     for(const file of toAdd){
-      try{ pendingGambar[portion].push(await compressImage(file, 1000, 0.8)); }
+      try{ pendingGambar[portion].push(await compressImage(file, 800, 0.7)); }
       catch(err){ alert('Gagal memproses salah satu foto. Foto tersebut dilewati.'); }
     }
     renderGalleryPreview(portion);
