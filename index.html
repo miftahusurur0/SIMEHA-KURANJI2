@@ -47,6 +47,12 @@
     --c-karbo:#4F7942;
     --c-serat:#3B6E8C;
 
+    /* Permukaan card menu: abu-abu hangat + motif garis alat makan,
+       supaya terasa seperti "kertas menu" modern, bukan kartu polos. */
+    --card-surface:#F5F4EF;
+    --card-surface-deep:#ECEAE2;
+    --card-pattern: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMjAiIGhlaWdodD0iMjIwIiB2aWV3Qm94PSIwIDAgMjIwIDIyMCI+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNkI2QjYwIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIwLjEwIj4KICAgIDwhLS0gZ2FycHUgJiBwaXNhdSBiZXJzaWxhbmcgLS0+CiAgICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyOCwzMCkgcm90YXRlKC0xOCkiPgogICAgICA8bGluZSB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMzQiLz4KICAgICAgPGxpbmUgeDE9Ii01IiB5MT0iMCIgeDI9Ii01IiB5Mj0iMTAiLz4KICAgICAgPGxpbmUgeDE9IjUiIHkxPSIwIiB4Mj0iNSIgeTI9IjEwIi8+CiAgICAgIDxsaW5lIHgxPSItNSIgeTE9IjEwIiB4Mj0iMCIgeTI9IjE2Ii8+CiAgICAgIDxsaW5lIHgxPSI1IiB5MT0iMTAiIHgyPSIwIiB5Mj0iMTYiLz4KICAgICAgPGxpbmUgeDE9IjAiIHkxPSIxNiIgeDI9IjAiIHkyPSIzNCIvPgogICAgICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNiwwKSI+CiAgICAgICAgPHBhdGggZD0iTTAsMCBDNCw0IDQsMTAgMCwxNiBMMCwzNCIvPgogICAgICA8L2c+CiAgICA8L2c+CiAgICA8IS0tIG1hbmdrdWsgbWVuZ2VwdWwgLS0+CiAgICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNTAsMTQwKSI+CiAgICAgIDxwYXRoIGQ9Ik0tMTYsMCBhMTYsMTAgMCAwLDAgMzIsMCB6Ii8+CiAgICAgIDxsaW5lIHgxPSItMTYiIHkxPSIwIiB4Mj0iMTYiIHkyPSIwIi8+CiAgICAgIDxwYXRoIGQ9Ik0tNiwtMTQgcTQsLTYgMCwtMTIiLz4KICAgICAgPHBhdGggZD0iTTIsLTE2IHE0LC02IDAsLTEyIi8+CiAgICAgIDxwYXRoIGQ9Ik0xMCwtMTQgcTQsLTYgMCwtMTIiLz4KICAgIDwvZz4KICAgIDwhLS0gY2FiYWkgLS0+CiAgICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNjgsMzQpIHJvdGF0ZSgyMCkiPgogICAgICA8cGF0aCBkPSJNMCwwIHExOCwyIDIyLDE2IHEyLDEwIC04LDEwIHEtMTYsMCAtMTgsLTE0IHEtMSwtOCA0LC0xMiB6Ii8+CiAgICAgIDxwYXRoIGQ9Ik0wLDAgcS02LC02IC0yLC0xMiIvPgogICAgPC9nPgogICAgPCEtLSBkYXVuIHNwcmlnIC0tPgogICAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMzAsMTY4KSByb3RhdGUoLTEwKSI+CiAgICAgIDxwYXRoIGQ9Ik0wLDIwIHEwLC0yMCAyMCwtMjAiLz4KICAgICAgPHBhdGggZD0iTTQsMTQgcTYsLTYgMTIsLTEwIi8+CiAgICAgIDxwYXRoIGQ9Ik04LDggcTQsLTMgNywtNiIvPgogICAgPC9nPgogIDwvZz4KPC9zdmc+Cg==");
+
     --radius:20px;
     --shadow: 0 1px 2px rgba(31,51,36,.04), 0 8px 24px -12px rgba(31,51,36,.18);
     --shadow-lift: 0 12px 28px -14px rgba(31,51,36,.28);
@@ -116,9 +122,20 @@
 
   /* ================= MENU HERO CARD ================= */
   .menu-card{
-    background:var(--paper); border-radius:var(--radius); box-shadow:var(--shadow);
+    /* Lapisan: sapuan cahaya tipis di atas + motif garis alat makan
+       (garpu-pisau, mangkuk mengepul, cabai, daun) di atas dasar
+       abu-abu hangat — bukan kartu putih polos, tapi tetap tenang
+       supaya konten (nama menu, foto, gizi) tetap yang paling menonjol. */
+    background-color:var(--card-surface);
+    background-image:
+      linear-gradient(165deg, rgba(255,255,255,.75), rgba(255,255,255,0) 42%),
+      var(--card-pattern);
+    background-repeat:no-repeat, repeat;
+    background-size:cover, 200px 200px;
+    background-position:center, center;
+    border-radius:var(--radius); box-shadow:var(--shadow);
     padding:26px 26px 24px; margin-bottom:18px; border:1px solid var(--line);
-    position:relative;
+    position:relative; overflow:hidden;
   }
   .admin-delete-btn{
     position:absolute; top:12px; right:12px;
@@ -607,7 +624,7 @@
      meminta login Google dan menyebabkan error "Server tidak membalas JSON".
    - Gunakan SELALU URL dari "Manage deployments" yang berakhiran /exec.
    ========================================================= */
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbygt_EjB38Lw68QtHfhzlMSKPsDk6l40obTFoL4Vihxz7QC47y6g7p6KrOnMSW1HRpO/exec'; // Contoh: 'https://script.google.com/macros/s/xxxxx/exec'
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbycT00SbBkkvIYjO7P63hNZf9Dn_B1D0MQ4CfC0RFR7FVKlnbtVNgIALbykWchOiTx4/exec'; // Contoh: 'https://script.google.com/macros/s/xxxxx/exec'
 
 const MAX_GAMBAR = 3;
 const MAX_VIDEO_DURATION = 15;
