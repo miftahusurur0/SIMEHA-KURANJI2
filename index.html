@@ -1912,6 +1912,13 @@ window.addEventListener('unhandledrejection', function(e){
         <span class="icon"><svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></span>
         Porsi Besar
       </p>
+      <div class="porsi-count-field">
+        <div class="porsi-count-label">
+          <span class="icon icon-sm icon-karbo"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <div><strong>Jumlah Porsi Besar</strong><small>Jumlah porsi yang dibagikan</small></div>
+        </div>
+        <input type="number" id="fJumlahPorsiBesar" min="0" step="1" inputmode="numeric" placeholder="Contoh: 1176">
+      </div>
       <div class="grid2">
         <div class="field"><label for="fEnergiBesar">Energi (Kkal)</label><input type="number" id="fEnergiBesar" min="0"></div>
         <div class="field"><label for="fProteinBesar">Protein (g)</label><input type="number" id="fProteinBesar" min="0"></div>
@@ -1949,6 +1956,13 @@ window.addEventListener('unhandledrejection', function(e){
         <span class="icon"><svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></span>
         Porsi Kecil
       </p>
+      <div class="porsi-count-field">
+        <div class="porsi-count-label">
+          <span class="icon icon-sm icon-karbo"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <div><strong>Jumlah Porsi Kecil</strong><small>Jumlah porsi yang dibagikan</small></div>
+        </div>
+        <input type="number" id="fJumlahPorsiKecil" min="0" step="1" inputmode="numeric" placeholder="Contoh: 1571">
+      </div>
       <div class="grid2">
         <div class="field"><label for="fEnergiKecil">Energi (Kkal)</label><input type="number" id="fEnergiKecil" min="0"></div>
         <div class="field"><label for="fProteinKecil">Protein (g)</label><input type="number" id="fProteinKecil" min="0"></div>
@@ -1980,12 +1994,21 @@ window.addEventListener('unhandledrejection', function(e){
       </div>
     </div>
 
-    <div class="field">
-      <label for="fJumlahPorsi">
-        <span class="icon icon-sm icon-karbo"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-        Jumlah Total Porsi (besar + kecil)
-      </label>
-      <input type="number" id="fJumlahPorsi" min="0" placeholder="Contoh: 350">
+    <div class="total-porsi-auto-card">
+      <div class="total-porsi-auto-head">
+        <div>
+          <span class="total-porsi-auto-kicker">REKAP PORSI</span>
+          <strong>Jumlah Total Porsi</strong>
+          <small>Besar + Kecil — dihitung otomatis</small>
+        </div>
+        <span class="total-porsi-auto-icon"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M7 12h10M7 8h10M7 16h6"/></svg></span></span>
+      </div>
+      <div class="total-porsi-auto-grid">
+        <div><span>Porsi Besar</span><strong id="fJumlahPorsiBesarSummary">0</strong></div>
+        <div><span>Porsi Kecil</span><strong id="fJumlahPorsiKecilSummary">0</strong></div>
+        <div class="total"><span>Total PM</span><strong id="fJumlahPorsiTotal">0</strong></div>
+      </div>
+      <input type="hidden" id="fJumlahPorsi" value="0">
     </div>
 
     <p class="section-divider">
@@ -2023,7 +2046,7 @@ window.addEventListener('unhandledrejection', function(e){
 /* =========================================================
    KONFIGURASI URL BACKEND
    ========================================================= */
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyX9oAy5pQGFYmA4_-8YCY2ihmnWgikPG1jrOgkqZenobORlS9Mrv6s0xoCjzy25DXJ/exec';
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbx0IsXCn-Qv675l504Nytm04p2KqvzUtLCrJVHehvu9sx3vfn97dKD8WIMz76mqQdQz/exec';
 
 const MAX_GAMBAR = 3;
 const MAX_VIDEO_DURATION = 15;
@@ -2608,9 +2631,18 @@ function renderPortionContent(container, menu, portion, viewKey){
 
   var totalCard = document.createElement('div');
   totalCard.className = 'pm-summary-card';
+  var porsiBesar = Number(menu.jumlah_porsi_besar);
+  var porsiKecil = Number(menu.jumlah_porsi_kecil);
+  var hasBreakdown = Number.isFinite(porsiBesar) && Number.isFinite(porsiKecil) && (porsiBesar > 0 || porsiKecil > 0);
+  if(!hasBreakdown){ porsiBesar = 0; porsiKecil = 0; }
+  var totalPorsi = (hasBreakdown ? porsiBesar + porsiKecil : (Number(menu.jumlah_porsi) || 0));
   totalCard.innerHTML =
     '<div class="pm-summary-icon"><span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span></div>' +
-    '<div><span class="pm-summary-label">TOTAL PM</span><strong>' + (Number(menu.jumlah_porsi) || 0) + '</strong><small>Porsi dibagikan</small></div>';
+    '<div class="pm-summary-main"><span class="pm-summary-label">TOTAL PM</span><strong>' + totalPorsi.toLocaleString('id-ID') + '</strong><small>Porsi dibagikan</small></div>' +
+    '<div class="pm-breakdown">' +
+      '<div><span>Besar</span><strong>' + porsiBesar.toLocaleString('id-ID') + '</strong></div>' +
+      '<div><span>Kecil</span><strong>' + porsiKecil.toLocaleString('id-ID') + '</strong></div>' +
+    '</div>';
 
   summary.appendChild(akgCard);
   summary.appendChild(totalCard);
@@ -3137,7 +3169,7 @@ function prefillMenuForm(){
   document.getElementById('fTanggal').value = todayLocalStr();
   document.getElementById('fNama').value = '';
   document.getElementById('fDeskripsi').value = '';
-  document.getElementById('fJumlahPorsi').value = '';
+  document.getElementById('fJumlahPorsiBesar').value = ''; document.getElementById('fJumlahPorsiKecil').value = ''; updateTotalPorsiForm();
   ['Besar','Kecil'].forEach(function(p){
     ['Energi','Protein','Lemak','Karbo','Serat'].forEach(function(n){ document.getElementById('f'+n+p).value = ''; });
     document.getElementById('fGambar'+p).value = '';
@@ -3270,6 +3302,36 @@ function collectInstansiRows(){
   }).filter(function(x){ return x.nama; });
 }
 
+
+/* ---------------- admin form: jumlah porsi otomatis ---------------- */
+function getPorsiInputValue(id){
+  var el = document.getElementById(id);
+  if(!el) return 0;
+  var n = Number(el.value);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+}
+function updateTotalPorsiForm(){
+  var besar = getPorsiInputValue('fJumlahPorsiBesar');
+  var kecil = getPorsiInputValue('fJumlahPorsiKecil');
+  var total = besar + kecil;
+  var hidden = document.getElementById('fJumlahPorsi');
+  if(hidden) hidden.value = String(total);
+  var b = document.getElementById('fJumlahPorsiBesarSummary');
+  var k = document.getElementById('fJumlahPorsiKecilSummary');
+  var t = document.getElementById('fJumlahPorsiTotal');
+  if(b) b.textContent = besar.toLocaleString('id-ID');
+  if(k) k.textContent = kecil.toLocaleString('id-ID');
+  if(t) t.textContent = total.toLocaleString('id-ID');
+}
+['Besar','Kecil'].forEach(function(p){
+  var el = document.getElementById('fJumlahPorsi' + p);
+  if(el){
+    el.addEventListener('input', updateTotalPorsiForm);
+    el.addEventListener('change', updateTotalPorsiForm);
+  }
+});
+updateTotalPorsiForm();
+
 /* ---------------- admin form: submit ---------------- */
 function buildPortionPayload(portion){
   var p = {
@@ -3296,7 +3358,9 @@ document.getElementById('menuSubmit').addEventListener('click', function(){
     tanggal: document.getElementById('fTanggal').value,
     nama_menu: document.getElementById('fNama').value.trim(),
     deskripsi: document.getElementById('fDeskripsi').value.trim(),
-    jumlah_porsi: document.getElementById('fJumlahPorsi').value,
+    jumlah_porsi_besar: getPorsiInputValue('fJumlahPorsiBesar'),
+    jumlah_porsi_kecil: getPorsiInputValue('fJumlahPorsiKecil'),
+    jumlah_porsi: getPorsiInputValue('fJumlahPorsiBesar') + getPorsiInputValue('fJumlahPorsiKecil'),
     tampilkan_instansi: document.getElementById('fTampilkanInstansi').checked,
     instansi: collectInstansiRows(),
     besar: buildPortionPayload('besar'),
@@ -3538,6 +3602,101 @@ loadToday();
     gap:10px !important;
     margin-top:0 !important;
   }
+}
+</style>
+
+
+<style>
+/* REKAP JUMLAH PORSI — ADMIN */
+.porsi-count-field{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin:0 0 16px;
+  padding:13px 14px;
+  background:linear-gradient(135deg,#f7fbf8,#eef6f1);
+  border:1px solid #d9e8df;
+  border-radius:15px;
+}
+.porsi-count-label{display:flex;align-items:center;gap:10px;min-width:0;}
+.porsi-count-label>div{display:flex;flex-direction:column;gap:2px;}
+.porsi-count-label strong{font-size:12px;color:#173328;}
+.porsi-count-label small{font-size:10px;color:#778980;}
+.porsi-count-field>input{
+  width:145px;
+  min-height:43px;
+  text-align:right;
+  font-size:16px;
+  font-weight:800;
+  background:#fff !important;
+  border:1px solid #cbdcd1 !important;
+  border-radius:12px !important;
+}
+.porsi-count-field>input:focus{
+  border-color:#17865a !important;
+  box-shadow:0 0 0 4px rgba(23,134,90,.10) !important;
+}
+.total-porsi-auto-card{
+  margin-top:2px;
+  padding:16px;
+  border:1px solid #cfe1d6;
+  border-radius:18px;
+  background:linear-gradient(135deg,#f6fbf8,#edf7f1);
+}
+.total-porsi-auto-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:12px;
+}
+.total-porsi-auto-head>div:first-child{display:flex;flex-direction:column;gap:2px;}
+.total-porsi-auto-kicker{font-size:9px;letter-spacing:.14em;font-weight:900;color:#17865a;}
+.total-porsi-auto-head strong{font-size:16px;color:#10251b;}
+.total-porsi-auto-head small{font-size:10px;color:#72847a;}
+.total-porsi-auto-icon{
+  width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+  background:#dff0e6;color:#17865a;
+}
+.total-porsi-auto-grid{
+  display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:8px;
+}
+.total-porsi-auto-grid>div{
+  padding:10px 11px;background:#fff;border:1px solid #dfebe3;border-radius:12px;
+  display:flex;flex-direction:column;gap:3px;
+}
+.total-porsi-auto-grid span{font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#829188;}
+.total-porsi-auto-grid strong{font-size:18px;color:#173328;}
+.total-porsi-auto-grid .total{
+  background:#10251b;border-color:#10251b;
+}
+.total-porsi-auto-grid .total span{color:#b8d6c5;}
+.total-porsi-auto-grid .total strong{color:#fff;font-size:22px;}
+
+.pm-summary-main{min-width:100px;}
+.pm-breakdown{
+  margin-left:auto;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  min-width:108px;
+}
+.pm-breakdown>div{
+  padding:8px 9px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.08);
+  border-radius:10px;
+  display:flex;flex-direction:column;gap:2px;
+}
+.pm-breakdown span{
+  font-size:8px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#b8d6c5;
+}
+.pm-breakdown strong{font-size:15px !important;color:#fff !important;margin:0 !important;}
+
+@media(max-width:640px){
+  .porsi-count-field{align-items:stretch;flex-direction:column;gap:9px;}
+  .porsi-count-field>input{width:100%;text-align:left;}
+  .total-porsi-auto-grid{grid-template-columns:1fr 1fr;}
+  .total-porsi-auto-grid .total{grid-column:span 2;}
+  .pm-breakdown{min-width:96px;}
 }
 </style>
 
