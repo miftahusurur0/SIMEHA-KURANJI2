@@ -1869,6 +1869,7 @@ window.addEventListener('unhandledrejection', function(e){
       </button>
     </div>
     <p class="modal-msg" id="loginMsg"></p>
+    <div class="login-enter-hint" aria-hidden="true">Tekan <kbd>Enter</kbd> untuk masuk</div>
   </div>
 </div>
 
@@ -2046,7 +2047,7 @@ window.addEventListener('unhandledrejection', function(e){
 /* =========================================================
    KONFIGURASI URL BACKEND
    ========================================================= */
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbx0IsXCn-Qv675l504Nytm04p2KqvzUtLCrJVHehvu9sx3vfn97dKD8WIMz76mqQdQz/exec';
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzHQ9e8JoDIy3LnMtOD8m6q4LdGthqcryVjRj3Iiaa3a1rVXJoH_zwFW_HnVu138C28/exec';
 
 const MAX_GAMBAR = 3;
 const MAX_VIDEO_DURATION = 15;
@@ -2503,9 +2504,29 @@ function renderMenuCard(dateEl, bodyEl, menu, dateLabel){
     btn.title = 'Hapus menu ini';
     btn.addEventListener('click', function(e){
       e.stopPropagation();
-      if(confirm('Yakin ingin menghapus menu "' + menu.nama_menu + '"?\nData instansi dan rating terkait juga akan dihapus.')){
-        deleteMenuAction(menu.id, 0, function(){ loadToday(); });
-      }
+      Swal.fire({
+        icon: 'warning',
+        title: 'Hapus menu?',
+        html: 'Yakin ingin menghapus menu <b>' + escHtml_(menu.nama_menu) + '</b>?<br><span style="font-size:12px;color:#718078">Data instansi dan rating terkait juga akan dihapus.</span>',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, hapus',
+        cancelButtonText: 'Batal',
+        reverseButtons: true,
+        focusCancel: true
+      }).then(function(result){
+        if(result.isConfirmed){
+          deleteMenuAction(menu.id, 0, function(){
+            Swal.fire({
+              icon:'success',
+              title:'Menu berhasil dihapus',
+              text:'Menu telah dihapus dari sistem.',
+              timer:1600,
+              showConfirmButton:false
+            });
+            loadToday();
+          });
+        }
+      });
     });
     card.appendChild(btn);
   }
@@ -2915,9 +2936,29 @@ function loadHistory(){
       if(delBtn && canDel){
         delBtn.addEventListener('click', function(e){
           e.stopPropagation();
-          if(confirm('Yakin ingin menghapus menu "' + m.nama_menu + '" dari riwayat?')){
-            deleteMenuAction(m.id, 3, function(){ loadHistory(); });
-          }
+          Swal.fire({
+            icon: 'warning',
+            title: 'Hapus menu dari riwayat?',
+            html: 'Yakin ingin menghapus <b>' + escHtml_(m.nama_menu) + '</b> dari riwayat?',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, hapus',
+            cancelButtonText: 'Batal',
+            reverseButtons: true,
+            focusCancel: true
+          }).then(function(result){
+            if(result.isConfirmed){
+              deleteMenuAction(m.id, 3, function(){
+                Swal.fire({
+                  icon:'success',
+                  title:'Menu berhasil dihapus',
+                  text:'Menu telah dihapus dari riwayat.',
+                  timer:1600,
+                  showConfirmButton:false
+                });
+                loadHistory();
+              });
+            }
+          });
         });
       }
       listEl.appendChild(item);
@@ -3071,6 +3112,71 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('[data-close]').forEach(function(el){ el.addEventListener('click', function(){ closeModal(el.dataset.close); }); });
 document.querySelectorAll('.modal-overlay').forEach(function(ov){ ov.addEventListener('click', function(e){ if(e.target === ov) ov.classList.remove('open'); }); });
 
+
+/* =========================================================
+   ADMIN SESSION PERSISTENCE
+   Menjaga status login saat halaman di-refresh pada tab yang sama.
+   Kredensial hanya disimpan di sessionStorage, bukan localStorage,
+   sehingga tidak bertahan setelah tab/browser ditutup.
+   ========================================================= */
+var ADMIN_SESSION_KEY = 'sppg_admin_session_v1';
+
+function saveAdminSession_(){
+  try{
+    if(adminUsername && adminPassword){
+      sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({
+        username: adminUsername,
+        password: adminPassword,
+        savedAt: Date.now()
+      }));
+    }
+  }catch(e){}
+}
+
+function clearAdminSession_(){
+  try{ sessionStorage.removeItem(ADMIN_SESSION_KEY); }catch(e){}
+}
+
+function restoreAdminSession_(){
+  var raw = null;
+  try{ raw = sessionStorage.getItem(ADMIN_SESSION_KEY); }catch(e){}
+  if(!raw) return Promise.resolve(false);
+
+  var saved;
+  try{ saved = JSON.parse(raw); }catch(e){
+    clearAdminSession_();
+    return Promise.resolve(false);
+  }
+
+  if(!saved || !saved.username || !saved.password){
+    clearAdminSession_();
+    return Promise.resolve(false);
+  }
+
+  return apiCall({
+    action:'login',
+    username:saved.username,
+    password:saved.password
+  }).then(function(res){
+    if(res && res.success){
+      adminUsername = saved.username;
+      adminPassword = saved.password;
+      saveAdminSession_();
+      updateAdminUi();
+      return true;
+    }
+    clearAdminSession_();
+    return false;
+  }).catch(function(){
+    /* Jika server sementara gagal, jangan langsung logout.
+       Status login tetap dipertahankan di sessionStorage. */
+    adminUsername = saved.username;
+    adminPassword = saved.password;
+    updateAdminUi();
+    return true;
+  });
+}
+
 function updateAdminUi(){
   var logoutBtn = document.getElementById('logoutBtn');
   var loginBtn = document.getElementById('loginBtn');
@@ -3091,14 +3197,33 @@ function updateAdminUi(){
 
 document.getElementById('logoutBtn').addEventListener('click', function(){
   if(!adminUsername) return;
-  if(!confirm('Keluar dari mode admin?')) return;
-  adminUsername = null;
-  adminPassword = null;
-  updateAdminUi();
-  closeModal('menuModal');
-  closeModal('loginModal');
-  loadToday();
-  loadHistory();
+  Swal.fire({
+    icon:'question',
+    title:'Keluar dari mode admin?',
+    text:'Kamu akan kembali ke tampilan pengguna biasa.',
+    showCancelButton:true,
+    confirmButtonText:'Ya, logout',
+    cancelButtonText:'Batal',
+    reverseButtons:true,
+    focusCancel:true
+  }).then(function(result){
+    if(!result.isConfirmed) return;
+    adminUsername = null;
+    adminPassword = null;
+    clearAdminSession_();
+    updateAdminUi();
+    closeModal('menuModal');
+    closeModal('loginModal');
+    loadToday();
+    loadHistory();
+    Swal.fire({
+      icon:'success',
+      title:'Berhasil logout',
+      text:'Kamu sekarang berada dalam mode pengguna.',
+      timer:1400,
+      showConfirmButton:false
+    });
+  });
 });
 
 document.getElementById('loginBtn').addEventListener('click', function(){
@@ -3133,6 +3258,19 @@ document.getElementById('togglePass').addEventListener('click', function(){
   this.setAttribute('aria-label', showing ? 'Lihat password' : 'Sembunyikan password');
 });
 
+
+/* Enter = Login saat modal login terbuka */
+['userInput','passInput'].forEach(function(id){
+  var el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      document.getElementById('loginSubmit').click();
+    }
+  });
+});
+
 document.getElementById('loginSubmit').addEventListener('click', function(){
   var username = document.getElementById('userInput').value.trim();
   var password = document.getElementById('passInput').value;
@@ -3142,7 +3280,9 @@ document.getElementById('loginSubmit').addEventListener('click', function(){
 
   apiCall({ action:'login', username:username, password:password }).then(function(res){
     if(res.success){
-      adminUsername = username; adminPassword = password;
+      adminUsername = username;
+      adminPassword = password;
+      saveAdminSession_();
       updateAdminUi();
       msg.textContent = 'Berhasil masuk.'; msg.className = 'modal-msg ok';
       loadToday();
@@ -3432,10 +3572,17 @@ document.getElementById('menuSubmit').addEventListener('click', function(){
 });
 
 /* ---------------- init ---------------- */
-loadToday();
+updateAdminUi();
 
-  // Sinkronkan tombol admin saat halaman pertama kali dibuka.
-  updateAdminUi();
+restoreAdminSession_().then(function(restored){
+  /* Setelah status admin dipulihkan, render ulang agar tombol Hapus,
+     detail rating, dan tombol Tambah Menu langsung mengikuti status login. */
+  loadToday();
+  loadHistory();
+}).catch(function(){
+  loadToday();
+  loadHistory();
+});
 </script>
 
 <style>
@@ -3697,6 +3844,34 @@ loadToday();
   .total-porsi-auto-grid{grid-template-columns:1fr 1fr;}
   .total-porsi-auto-grid .total{grid-column:span 2;}
   .pm-breakdown{min-width:96px;}
+}
+</style>
+
+
+<style>
+.login-enter-hint{
+  margin-top:10px;
+  text-align:center;
+  color:#8a9890;
+  font-size:11px;
+}
+.login-enter-hint kbd{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:42px;
+  height:23px;
+  padding:0 7px;
+  margin:0 2px;
+  border:1px solid #d5e0d9;
+  border-bottom-width:2px;
+  border-radius:6px;
+  background:#f7faf8;
+  color:#53665b;
+  font:700 10px/1 inherit;
+}
+.swal2-container{
+  z-index:20000 !important;
 }
 </style>
 
