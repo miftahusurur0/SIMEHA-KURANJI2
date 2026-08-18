@@ -1824,14 +1824,10 @@ window.addEventListener('unhandledrejection', function(e){
       </p>
       <h1 class="brand-title">Menu &amp; <em>Gizi</em> Hari Ini</h1>
     </div>
-    <button class="login-btn" id="loginBtn" style="display:none;">
-      <span class="icon"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span>
-      <span id="loginBtnText">Login Admin</span>
-    </button>
-    <div style="display:flex; align-items:center; gap:10px;">
-      <button class="login-btn" id="tambahMenuBtn" style="display:none; background:var(--c-karbo); color:#fff;" title="Tambah menu baru">
-        <span class="icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        <span>Tambah Menu</span>
+    <div class="board-actions">
+      <button class="login-btn" id="loginBtn" style="display:none;">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span>
+        <span id="loginBtnText">Login Admin</span>
       </button>
       <button class="logout-btn" id="logoutBtn" type="button" style="display:none;" title="Keluar dari mode admin">
         <span class="icon"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><line x1="15" y1="12" x2="3" y2="12"/><path d="M21 19V5a2 2 0 0 0-2-2h-5"/></svg></span>
@@ -2200,7 +2196,7 @@ window.addEventListener('unhandledrejection', function(e){
 /* =========================================================
    KONFIGURASI URL BACKEND
    ========================================================= */
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbx6oBXrvQzowakMiJLOxo3rNRurKkEJFwm-1vSzBfApwLclJUufCHCwgXJ2LjLp2Etq/exec';
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzmNSjL7lAHIJHCHkqW8JY4AFwFVXfW8o_VBYUWx9oUFxWfEM-wohG4mMaUbHJIQD_R/exec';
 
 const MAX_GAMBAR = 3;
 const MAX_VIDEO_DURATION = 15;
@@ -2616,6 +2612,17 @@ function renderSlideshowCore(container, media, altBase, viewKey){
     show(idx + 1);
   }
 
+  // FIX: slide pertama dirender langsung lewat innerHTML (bukan lewat
+  // show()), jadi sebelumnya event 'ended'-nya tidak pernah terpasang —
+  // akibatnya kalau slide pertama berupa video, perpindahan hanya
+  // mengandalkan timer fallback (durasi tetap), bukan menunggu video itu
+  // benar-benar selesai diputar. Pasang juga di sini supaya konsisten
+  // dengan slide video lainnya.
+  if(firstVideo && media[0] && media[0].type === 'video'){
+    firstVideo.removeEventListener('ended', onVideoEnded);
+    firstVideo.addEventListener('ended', onVideoEnded);
+  }
+
   function scheduleAuto(){
     stopAutoSlide();
     var wait = currentDuration();
@@ -2861,38 +2868,12 @@ function renderPortionContent(container, menu, portion, viewKey){
 function renderSharedInfo(container, menu, currentPortion){
   container.innerHTML = '';
   if(!menu) return;
-  
-  // Tentukan porsi yang ditampilkan
-  var porsiBesar = Number(menu.jumlah_porsi_besar) || 0;
-  var porsiKecil = Number(menu.jumlah_porsi_kecil) || 0;
-  var hasBreakdown = Number.isFinite(porsiBesar) && Number.isFinite(porsiKecil) && (porsiBesar > 0 || porsiKecil > 0);
-  
-  var totalPorsi = 0;
-  var labelPorsi = '';
-  
-  if(hasBreakdown && currentPortion){
-    // Jika ada breakdown dan currentPortion diberikan, tampilkan sesuai porsi
-    totalPorsi = currentPortion === 'besar' ? porsiBesar : porsiKecil;
-    labelPorsi = 'porsi ' + (currentPortion === 'besar' ? 'Besar' : 'Kecil') + ' dibagikan hari ini';
-  } else if(hasBreakdown){
-    // Jika ada breakdown tapi tidak ada currentPortion, tampilkan total
-    totalPorsi = porsiBesar + porsiKecil;
-    labelPorsi = 'total porsi dibagikan hari ini';
-  } else if(menu.jumlah_porsi){
-    // Fallback ke jumlah_porsi yang lama
-    totalPorsi = menu.jumlah_porsi;
-    labelPorsi = 'total porsi dibagikan hari ini';
-  }
-  
-  if(totalPorsi > 0){
-    var el = document.createElement('div');
-    el.className = 'porsi-total';
-    el.innerHTML =
-      '<span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>' +
-      '<span class="num">' + totalPorsi.toLocaleString('id-ID') + '</span>' +
-      '<span class="lbl">' + labelPorsi + '</span>';
-    container.appendChild(el);
-  }
+
+  // Catatan: rincian jumlah Porsi Besar & Porsi Kecil sudah ditampilkan
+  // di kartu ringkasan (pm-summary-card) tepat di sebelah info AKG, di
+  // atas slideshow foto/video — baik di mobile maupun desktop (lihat
+  // renderPortionContent()). Panel ini cukup menampilkan info Instansi
+  // saja supaya tidak ada dua tampilan total porsi yang terpisah.
   var instansiEl = document.createElement('div');
   container.appendChild(instansiEl);
   renderInstansi(instansiEl, menu.id);
@@ -2917,9 +2898,10 @@ function renderInstansi(container, menuId){
 }
 
 /* ---------------- render: rating widget ---------------- */
-// FITUR: penilaian menyertakan Nama dan Instansi (wajib), serta Saran (opsional).
+// FITUR: penilaian menyertakan Nama dan Instansi (wajib); Pesan boleh
+// dikosongkan.
 // Nilai rata-rata & jumlah penilaian tetap tampil ke PUBLIK seperti biasa,
-// tapi detail siapa mengisi apa (Nama/Instansi/Saran per orang) HANYA
+// tapi detail siapa mengisi apa (Nama/Instansi/Pesan per orang) HANYA
 // dimuat & ditampilkan ketika admin sedang login (lihat loadAdminRatingList).
 function renderRating(container, menu){
   container.innerHTML = '';
@@ -2941,8 +2923,8 @@ function renderRating(container, menu){
       '<input type="text" id="nama-' + uid + '" placeholder="Nama kamu" value="' + escHtml_(saved && saved.nama) + '"></div>' +
     '<div class="field"><label for="instansi-' + uid + '"><span class="icon icon-sm"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span> Instansi</label>' +
       '<input type="text" id="instansi-' + uid + '" placeholder="Sekolah / instansi kamu" value="' + escHtml_(saved && saved.instansi) + '"></div>' +
-    '<div class="field"><label for="saran-' + uid + '"><span class="icon icon-sm"><svg viewBox="0 0 24 24"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg></span> Saran</label>' +
-      '<textarea id="saran-' + uid + '" placeholder="Saran untuk menu ini">' + escHtml_(saved && saved.saran) + '</textarea></div>' +
+    '<div class="field"><label for="saran-' + uid + '"><span class="icon icon-sm"><svg viewBox="0 0 24 24"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg></span> Pesan</label>' +
+      '<textarea id="saran-' + uid + '" placeholder="Pesan untuk menu ini (boleh dikosongkan)">' + escHtml_(saved && saved.saran) + '</textarea></div>' +
     '<button type="button" class="btn btn-primary btn-small" id="submit-' + uid + '">' + (saved && saved.rating ? 'Ubah Penilaian' : 'Kirim Penilaian') + '</button>' +
     '<p class="modal-msg" id="msg-' + uid + '"></p>' +
     '<div id="adminRatingList-' + uid + '"></div>';
@@ -3215,7 +3197,8 @@ function activateTab(tabName){
   document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
   var btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
   if(btn) btn.classList.add('active');
-  document.getElementById('view-' + tabName).classList.add('active');
+  var view = document.getElementById('view-' + tabName);
+  if(view) view.classList.add('active');
 
   // Sinkronkan juga tombol bottom nav (tampilan mobile ala aplikasi),
   // supaya aktif di kedua tempat tak peduli mana yang dipakai untuk pindah tab.
@@ -3232,7 +3215,12 @@ function activateTab(tabName){
   if(tabName === 'history') loadHistory();
 }
 
-document.querySelectorAll('.tab-btn').forEach(function(btn){
+// FIX: pakai selector '.tab-btn[data-tab]' (bukan '.tab-btn' saja) supaya
+// tombol "Tambah Menu" (yang tidak punya data-tab, karena fungsinya buka
+// modal, bukan pindah tab/view) TIDAK ikut memicu activateTab(undefined) —
+// itu penyebab error "Cannot read properties of null (reading 'classList')"
+// saat tombolnya diklik.
+document.querySelectorAll('.tab-btn[data-tab]').forEach(function(btn){
   btn.addEventListener('click', function(){ activateTab(btn.dataset.tab); });
 });
 document.querySelectorAll('.bn-btn[data-tab]').forEach(function(btn){
@@ -3360,19 +3348,17 @@ function restoreAdminSession_(){
 function updateAdminUi(){
   var logoutBtn = document.getElementById('logoutBtn');
   var loginBtn = document.getElementById('loginBtn');
-  var tambahMenuBtn = document.getElementById('tambahMenuBtn');
   var tabTambah = document.getElementById('tabTambahMenu');
   var bottomLabel = document.getElementById('bottomNavAdminLabel');
   if(adminUsername){
     if(logoutBtn) logoutBtn.style.display = 'inline-flex';
     if(loginBtn) loginBtn.style.display = 'none';
-    if(tambahMenuBtn) tambahMenuBtn.style.display = 'inline-flex';
-    if(tabTambah) tabTambah.style.display = 'none';
+    // Tombol Tambah Menu tampil sejajar dengan tab Hari Ini / Riwayat.
+    if(tabTambah) tabTambah.style.display = '';
     if(bottomLabel) bottomLabel.textContent = 'Tambah Menu';
   }else{
     if(logoutBtn) logoutBtn.style.display = 'none';
     if(loginBtn) loginBtn.style.display = '';
-    if(tambahMenuBtn) tambahMenuBtn.style.display = 'none';
     if(tabTambah) tabTambah.style.display = 'none';
     if(bottomLabel) bottomLabel.textContent = 'Admin';
   }
@@ -3411,16 +3397,7 @@ document.getElementById('loginBtn').addEventListener('click', function(){
   openModal('loginModal');
 });
 
-/* Tombol Tambah Menu di header */
-var tambahMenuBtn = document.getElementById('tambahMenuBtn');
-if(tambahMenuBtn){
-  tambahMenuBtn.addEventListener('click', function(){
-    prefillMenuForm();
-    openModal('menuModal');
-  });
-}
-
-/* Tombol Tambah Menu di tabs bar (fallback) */
+/* Tombol Tambah Menu — sejajar dengan tab Hari Ini / Riwayat di tabs bar */
 var tabTambah = document.getElementById('tabTambahMenu');
 if(tabTambah){
   tabTambah.addEventListener('click', function(){
@@ -3877,8 +3854,11 @@ restoreAdminSession_().then(function(restored){
     font-size:34px !important;
   }
 
-  /* Hilangkan card total PM lama dari right column karena summary baru
-     sudah menampilkan TOTAL PM sejajar dengan AKG. */
+  /* Catatan: badge total porsi lama sudah tidak lagi dibuat sama sekali
+     oleh renderSharedInfo() (di semua ukuran layar, bukan cuma desktop) —
+     rincian Porsi Besar/Kecil kini hanya tampil sekali, sejajar dengan
+     AKG di atas slideshow. Aturan display:none di bawah sengaja dibiarkan
+     sebagai pengaman jika suatu saat elemen itu muncul lagi. */
   #sharedInfo-today > .porsi-total,
   #sharedInfo-hist > .porsi-total{
     display:none !important;
@@ -4132,13 +4112,10 @@ restoreAdminSession_().then(function(restored){
 .tab-btn-admin:hover{
   background: rgba(23,134,90,.10) !important;
 }
-/* Tombol Tambah Menu sudah dipindahkan ke header, hide dari tabs bar */
-#tabTambahMenu{ display:none !important; }
+/* Tombol Tambah Menu tampil sejajar tab Hari Ini / Riwayat (lihat updateAdminUi()) */
 
-/* Di mobile, login button tetap hidden karena pakai bottom nav. */
-@media(max-width:640px){
-  /* Header buttons tetap visible untuk menampilkan Tambah Menu dan Logout */
-}
+/* Di mobile, tabs bar disembunyikan dan diganti bottom nav; akses Tambah
+   Menu tetap tersedia lewat tombol "Admin" pada bottom nav tersebut. */
 </style>
 
 </body>
