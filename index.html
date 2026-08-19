@@ -1530,12 +1530,14 @@ select:focus-visible{
 .akg-mini-item strong{font-size:16px;line-height:1.1;color:#10251b;white-space:nowrap;}
 .akg-mini-item small{font-size:9px;color:#7b8d84;font-weight:700;}
 .pm-summary-card{
-  display:flex;align-items:center;gap:14px;padding:20px;
+  display:flex;flex-wrap:wrap;align-items:center;row-gap:10px;column-gap:14px;padding:20px;
   background:linear-gradient(145deg,#10251b,#174d37);color:#fff;border-color:#174d37;
+  overflow:hidden;
 }
 .pm-summary-icon{
   width:48px;height:48px;border-radius:15px;display:grid;place-items:center;
   background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);
+  flex-shrink:0;
 }
 .pm-summary-label{display:block;font-size:10px;letter-spacing:.15em;font-weight:900;color:#b8d6c5;}
 .pm-summary-card strong{display:block;font-size:38px;line-height:1.05;letter-spacing:-.04em;margin:3px 0;}
@@ -2196,7 +2198,7 @@ window.addEventListener('unhandledrejection', function(e){
 /* =========================================================
    KONFIGURASI URL BACKEND
    ========================================================= */
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxXlSS_1_Da5hLupgIaX4GU0e2w4GJgd9vX7Hqg8KWK9_buCgKcdhzegZob2sBklQ8Z/exec';
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyaRzcOiRK2GEzU_fxVsHmyAzi6yuLdEMJgHNPWOpYSc3VkZ22itKwFzv7uOiaZnCg/exec';
 
 const MAX_GAMBAR = 3;
 const MAX_VIDEO_DURATION = 15;
@@ -3079,26 +3081,52 @@ function loadHistory(){
     listEl.innerHTML = '';
     res.data.forEach(function(m, i){
       var item = document.createElement('div');
-      item.className = 'hist-item';
+      item.className = 'hist-card anim-fade';
       item.style.animationDelay = (i * 0.06) + 's';
-      item.classList.add('anim-fade');
       var canDel = adminUsername && m.can_delete;
       var whyNot = (!m.can_delete && adminUsername) ? 'Baru bisa dihapus setelah 3 hari.' : '';
+
+      // Pilih foto sampul: foto porsi besar diutamakan, lalu porsi kecil —
+      // supaya kartu Riwayat menampilkan foto asli menu, sama seperti
+      // galeri di tampilan Menu Hari Ini (bukan cuma teks polos).
+      var besarImgs = (m.besar && Array.isArray(m.besar.gambar)) ? m.besar.gambar.filter(Boolean) : [];
+      var kecilImgs = (m.kecil && Array.isArray(m.kecil.gambar)) ? m.kecil.gambar.filter(Boolean) : [];
+      var thumbSrc = besarImgs[0] || kecilImgs[0] || null;
+      var totalFoto = besarImgs.length + kecilImgs.length;
+      var hasVideo = !!((m.besar && m.besar.video_url) || (m.kecil && m.kecil.video_url));
+      var namaAman = escHtml_(m.nama_menu);
+
+      var mediaHtml;
+      if(thumbSrc){
+        mediaHtml =
+          '<img src="' + thumbSrc + '" alt="Foto ' + namaAman + '" loading="lazy" ' +
+          'onerror="this.closest(&quot;.hist-card-media&quot;).classList.add(&quot;is-placeholder&quot;); this.remove();">' +
+          (hasVideo ? '<span class="hist-card-video-badge"><span class="icon">' + slideVideoIcon_() + '</span>Video</span>' : '') +
+          (totalFoto > 1 ? '<span class="hist-card-photo-count">+' + (totalFoto - 1) + ' foto</span>' : '');
+      } else if(hasVideo){
+        mediaHtml = '<span class="hist-card-video-badge hist-card-video-badge-solo"><span class="icon">' + slideVideoIcon_() + '</span>Video tersedia</span>';
+      } else {
+        mediaHtml = '<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>';
+      }
+
       item.innerHTML =
-        '<div style="flex:1;min-width:0;">' +
-          '<div class="hist-date">' + fmtTanggal(m.tanggal) + '</div>' +
-          '<div class="hist-name">' + m.nama_menu + '</div>' +
+        '<div class="hist-card-media' + (thumbSrc ? '' : ' is-placeholder') + '">' +
+          mediaHtml +
+          (adminUsername ? '<button type="button" class="hist-card-delete-btn" title="' + (canDel ? 'Hapus menu' : whyNot) + '"' + (canDel ? '' : ' disabled') + ' data-id="' + m.id + '"><span class="icon"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></button>' : '') +
         '</div>' +
-        '<div style="display:flex;align-items:center;gap:8px;">' +
-          '<span class="hist-rating" id="histRating-' + m.id + '">&#9733; --</span>' +
-          '<span class="hist-badge">RIWAYAT</span>' +
-          (adminUsername ? '<button type="button" class="hist-delete-btn" title="' + (canDel ? 'Hapus menu' : whyNot) + '"' + (canDel ? '' : ' disabled') + ' data-id="' + m.id + '"><span class="icon"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></button>' : '') +
+        '<div class="hist-card-body">' +
+          '<div class="hist-card-date">' + fmtTanggal(m.tanggal) + '</div>' +
+          '<div class="hist-card-name">' + namaAman + '</div>' +
+          '<div class="hist-card-footer">' +
+            '<span class="hist-card-rating" id="histRating-' + m.id + '">&#9733; --</span>' +
+            '<span class="hist-card-tag">Riwayat</span>' +
+          '</div>' +
         '</div>';
       item.addEventListener('click', function(e){
-        if(e.target.closest('.hist-delete-btn')) return;
+        if(e.target.closest('.hist-card-delete-btn')) return;
         showHistDetail(m);
       });
-      var delBtn = item.querySelector('.hist-delete-btn');
+      var delBtn = item.querySelector('.hist-card-delete-btn');
       if(delBtn && canDel){
         delBtn.addEventListener('click', function(e){
           e.stopPropagation();
@@ -3987,13 +4015,15 @@ restoreAdminSession_().then(function(restored){
 .total-porsi-auto-grid .total span{color:#b8d6c5;}
 .total-porsi-auto-grid .total strong{color:#fff;font-size:22px;}
 
-.pm-summary-main{min-width:100px;}
+.pm-summary-main{min-width:80px;flex:1 1 auto;}
 .pm-breakdown{
   margin-left:auto;
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:6px;
-  min-width:108px;
+  flex:0 1 190px;
+  min-width:150px;
+  max-width:100%;
 }
 .pm-breakdown>div{
   padding:8px 9px;
@@ -4116,6 +4146,106 @@ restoreAdminSession_().then(function(restored){
 
 /* Di mobile, tabs bar disembunyikan dan diganti bottom nav; akses Tambah
    Menu tetap tersedia lewat tombol "Admin" pada bottom nav tersebut. */
+</style>
+
+<style>
+/* ===== RIWAYAT — kartu bergambar (mirip tampilan Menu Hari Ini) ===== */
+#histList{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+  gap:16px;
+}
+.hist-card{
+  display:flex;
+  flex-direction:column;
+  background:#fff;
+  border:1px solid #dfe8e2;
+  border-radius:18px;
+  overflow:hidden;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+  transition:var(--transition);
+}
+.hist-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 16px 34px rgba(16,37,27,.09);
+  border-color:#b9d8c6;
+}
+.hist-card-media{
+  position:relative;
+  width:100%;
+  aspect-ratio:4/3;
+  background:linear-gradient(145deg,#eef4f0,#e2ece5);
+  overflow:hidden;
+}
+.hist-card-media img{
+  width:100%; height:100%; object-fit:cover; display:block;
+}
+.hist-card-media.is-placeholder{
+  display:flex; align-items:center; justify-content:center; color:#9db3a7;
+}
+.hist-card-media.is-placeholder .icon{width:32px; height:32px;}
+.hist-card-media.is-placeholder .icon svg{width:100%; height:100%;}
+.hist-card-video-badge{
+  position:absolute; top:10px; left:10px;
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(16,37,27,.72); color:#fff; backdrop-filter:blur(4px);
+  font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+  padding:5px 9px; border-radius:999px;
+}
+.hist-card-video-badge .icon{width:11px; height:11px;}
+.hist-card-video-badge .icon svg{width:100%; height:100%;}
+.hist-card-video-badge-solo{
+  position:static; font-size:11px; padding:7px 13px;
+}
+.hist-card-photo-count{
+  position:absolute; bottom:10px; right:10px;
+  background:rgba(16,37,27,.72); color:#fff;
+  font-size:10px; font-weight:800; padding:4px 9px; border-radius:999px;
+}
+.hist-card-delete-btn{
+  position:absolute; top:9px; right:9px;
+  background:rgba(217,87,87,.92); color:#fff; border:none;
+  width:28px; height:28px; border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:var(--transition);
+}
+.hist-card-delete-btn .icon{width:14px; height:14px;}
+.hist-card-delete-btn .icon svg{width:100%; height:100%;}
+.hist-card-delete-btn:hover{transform:scale(1.12); opacity:.9;}
+.hist-card-delete-btn:disabled{background:rgba(120,132,122,.7); cursor:not-allowed; transform:none;}
+.hist-card-body{
+  display:flex; flex-direction:column; gap:5px;
+  padding:13px 15px 14px; flex:1;
+}
+.hist-card-date{
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:.04em;
+  color:var(--ink-faint); font-weight:700;
+}
+.hist-card-name{
+  font-size:14.5px; font-weight:800; color:var(--ink);
+  line-height:1.32;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.hist-card-footer{
+  margin-top:auto; padding-top:8px; border-top:1px solid #eef2ef;
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.hist-card-rating{
+  font-family:var(--font-mono); font-size:11.5px; font-weight:800;
+  color:var(--c-lemak); white-space:nowrap;
+}
+.hist-card-tag{
+  font-family:var(--font-mono); font-size:9.5px; letter-spacing:.07em; text-transform:uppercase;
+  background:#edf6f0; color:#4f6b5b; padding:3px 9px; border-radius:999px;
+  white-space:nowrap;
+}
+@media(max-width:640px){
+  #histList{grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px;}
+  .hist-card-body{padding:11px 12px 12px;}
+  .hist-card-name{font-size:13.5px;}
+}
 </style>
 
 </body>
