@@ -1,14 +1,27 @@
 <!--
   =========================================================
-  Index.html — Frontend MBG (hosting Vercel/Netlify/GAS)
-  =========================================================
-  VERSI V2-FRONTEND:
-  • callApi mendukung 2 mode:
-      - Di dalam GAS          → google.script.run
-      - Vercel/Netlify/luar   → GET (aksi baca) + POST text/plain (aksi tulis)
-  • Ping diagnosa otomatis saat halaman dibuka (banner error jelas).
-  • Fitur: Batas Konsumsi countdown, Riwayat galeri, slideshow video
-    berpindah tepat sesuai durasi video.
+  Index.html — SATU-SATUNYA file frontend, dihosting LANGSUNG
+  dari Google Apps Script (tidak perlu Vercel/Netlify).
+
+  Cara pasang:
+  1. Di editor Apps Script (project yang sama dengan Code.gs),
+     klik + di samping "Files" > HTML > beri nama PERSIS: Index
+  2. Hapus isi bawaannya, tempel seluruh isi file ini.
+  3. Deploy > Manage deployments > klik pensil (Edit):
+       - Execute as    : Me
+       - Who has access: Anyone
+       - Version       : New version
+     lalu klik Deploy.
+  4. PENTING: gunakan URL yang berakhiran /exec (bukan /dev).
+  5. Jika dihosting TERPISAH dari GAS, isi konstanta GAS_API_URL
+     di bagian paling bawah <script> dengan URL web app Anda.
+
+  Fitur versi ini:
+  • Kolom "Batas Konsumsi" → kartu deadline rapi + countdown hidup
+  • Riwayat → galeri kartu ber-cover (foto, rating, chip media)
+  • Slideshow: gambar 5 detik; VIDEO berpindah slide TEPAT saat
+    durasi videonya habis (event 'ended'), progress bar mengikuti
+    durasi asli video; upload video divalidasi durasinya (≤15 dtk).
   =========================================================
 -->
 <!DOCTYPE html>
@@ -19,6 +32,7 @@
 <meta name="theme-color" content="#f4f7f5">
 <title>Menu Bergizi Hari Ini — MBG</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.10.1/sweetalert2.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -40,7 +54,8 @@
 html{scroll-behavior:smooth;}
 body{
   font-family:var(--font-body); color:var(--ink); line-height:1.6;
-  -webkit-font-smoothing:antialiased; min-height:100vh; padding-bottom:48px;
+  -webkit-font-smoothing:antialiased; min-height:100vh;
+  padding-bottom:48px;
   background:
     radial-gradient(circle at 5% 0%, rgba(23,134,90,.10), transparent 28%),
     radial-gradient(circle at 95% 10%, rgba(63,120,155,.08), transparent 25%),
@@ -70,18 +85,6 @@ body::before{
 .icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .icon-energi{color:var(--c-energi);} .icon-protein{color:var(--c-protein);}
 .icon-lemak{color:var(--c-lemak);} .icon-karbo{color:var(--c-karbo);} .icon-serat{color:var(--c-serat);}
-
-/* ================= API BANNER (diagnosa koneksi) ================= */
-.api-banner{
-  display:none; align-items:flex-start; gap:10px;
-  background:#fdecec; border:1px solid #f2c4c4; color:#8f2f2f;
-  border-radius:14px; padding:13px 15px; margin:18px 0 0;
-  font-size:13px; line-height:1.55;
-}
-.api-banner.show{display:flex; animation:fadeIn .3s ease both;}
-.api-banner .icon{width:18px;height:18px;flex-shrink:0;margin-top:2px;}
-.api-banner b{display:block;margin-bottom:3px;}
-.api-banner small{color:#a35454; font-size:11.5px; display:block; margin-top:5px;}
 
 /* ================= HEADER ================= */
 header.board{
@@ -165,7 +168,7 @@ section.view.active{display:block; animation:fadeIn .4s ease both;}
 .admin-delete-btn:hover{transform:scale(1.05); opacity:.92;}
 .admin-delete-btn .icon{width:14px;height:14px;}
 
-/* ================= BATAS KONSUMSI ================= */
+/* ================= BATAS KONSUMSI (kartu deadline) ================= */
 .batas-wrap:empty{display:none;}
 .batas-card{
   display:flex; align-items:center; gap:14px;
@@ -392,7 +395,7 @@ section.view.active{display:block; animation:fadeIn .4s ease both;}
 .rating-admin-instansi{font-weight:500; color:var(--ink-soft);}
 .rating-admin-saran{font-size:12.5px; color:var(--ink-soft); margin-top:4px; font-style:italic; line-height:1.45;}
 
-/* ================= RIWAYAT ================= */
+/* ================= RIWAYAT (galeri kartu) ================= */
 .hist-summary{
   font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
   color:var(--ink-faint); font-weight:700; margin:0 0 14px; display:flex; align-items:center; gap:6px;
@@ -516,7 +519,10 @@ section.view.active{display:block; animation:fadeIn .4s ease both;}
 .modal p.sub{color:#718078; font-size:13px; margin:0 0 20px;}
 .modal-body{display:flex; flex-direction:column; gap:4px;}
 .field{margin-bottom:14px;}
-.field label{display:flex; align-items:center; gap:5px; font-size:12px; font-weight:800; margin-bottom:6px; color:#53665b;}
+.field label{
+  display:flex; align-items:center; gap:5px; font-size:12px; font-weight:800;
+  margin-bottom:6px; color:#53665b;
+}
 .field label .icon{width:14px;height:14px;color:var(--c-serat);}
 .field input,.field textarea{
   width:100%; font-family:var(--font-body); font-size:14px; padding:10px 12px; min-height:44px;
@@ -553,6 +559,7 @@ section.view.active{display:block; animation:fadeIn .4s ease both;}
 .modal-msg{font-size:13px; margin-top:10px; min-height:18px;}
 .modal-msg:empty{display:none;}
 .modal-msg.err{color:var(--c-protein);}
+.modal-msg.ok{color:var(--c-karbo);}
 .close-x{
   position:absolute; top:18px; right:18px; background:none; border:none; cursor:pointer;
   color:var(--ink-faint); padding:6px; border-radius:9px; display:flex;
@@ -703,6 +710,31 @@ footer{text-align:center; font-family:var(--font-mono); font-size:11px; color:va
   .gizi-row{padding:11px 12px;}
   .gizi-val{font-size:13px;}
 }
+
+/* ================= CETAK LAPORAN (PDF) ================= */
+.login-btn.admin-print{background:var(--c-serat);}
+.login-btn.admin-print:hover{background:#2f6282;}
+.hist-tools{margin:0 0 14px; gap:10px; flex-wrap:wrap; align-items:center;}
+.btn-print{
+  font-family:var(--font-body); font-weight:800; font-size:12.5px; min-height:40px;
+  display:inline-flex; align-items:center; gap:7px; padding:9px 16px; cursor:pointer;
+  border:1px solid #cfe0d6; border-radius:12px; background:#fff; color:var(--ink);
+  box-shadow:var(--shadow); transition:var(--transition);
+}
+.btn-print .icon{width:16px; height:16px; color:var(--c-serat);}
+.btn-print:hover{background:#10251b; color:#fff; border-color:#10251b; transform:translateY(-1px);}
+.btn-print:hover .icon{color:#fff;}
+.print-presets{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 6px;}
+.preset-chip{
+  font-family:var(--font-body); font-weight:700; font-size:12px; padding:7px 13px; cursor:pointer;
+  border:1px solid #dbe6df; border-radius:999px; background:#f7faf8; color:var(--ink-soft); transition:var(--transition);
+}
+.preset-chip:hover{background:#e9efeb; color:var(--ink); border-color:#b9d8c6;}
+.print-count{
+  font-family:var(--font-mono); font-size:11.5px; font-weight:700; letter-spacing:.03em;
+  padding:10px 14px; border-radius:12px; background:#eaf6ef; color:#0f6b47; margin:6px 0 4px;
+}
+.print-count.warn{background:#fdf1f1; color:var(--c-protein);}
 </style>
 </head>
 <body>
@@ -715,6 +747,7 @@ footer{text-align:center; font-family:var(--font-mono); font-size:11px; color:va
     </div>
     <div class="board-actions">
       <button class="login-btn admin-add admin-only" id="adminAddBtn" type="button"><span class="icon" data-icon="plus"></span><span class="btn-label">Tambah Menu</span></button>
+      <button class="login-btn admin-print admin-only" id="adminPrintBtn" type="button" title="Cetak laporan riwayat (PDF)"><span class="icon" data-icon="printer"></span><span class="btn-label">Cetak Laporan</span></button>
       <button class="login-btn" id="loginBtn" type="button"><span class="icon" data-icon="logIn"></span><span>Login Admin</span></button>
     </div>
   </div>
@@ -722,8 +755,6 @@ footer{text-align:center; font-family:var(--font-mono); font-size:11px; color:va
 </header>
 
 <div class="wrap">
-
-  <div class="api-banner" id="apiBanner"></div>
 
   <div class="tabs" role="tablist">
     <button class="tab-btn active" data-tab="today" type="button"><span class="icon" data-icon="sun"></span>Hari Ini</button>
@@ -808,6 +839,7 @@ footer{text-align:center; font-family:var(--font-mono); font-size:11px; color:va
   <section class="view" id="view-history">
     <div id="histListView">
       <div class="hist-summary" id="histSummary"></div>
+      <div class="hist-tools admin-only"><button class="btn-print" id="printOpenBtn" type="button"><span class="icon" data-icon="printer"></span>Cetak Laporan Riwayat (PDF)</button></div>
       <div id="histList"><div class="empty-note">Memuat riwayat…</div></div>
     </div>
 
@@ -917,6 +949,36 @@ footer{text-align:center; font-family:var(--font-mono); font-size:11px; color:va
   </div>
 </div>
 
+<!-- ============ MODAL CETAK LAPORAN ============ -->
+<div class="modal-overlay" id="printModal">
+  <div class="modal">
+    <button class="close-x" data-close type="button"><span class="icon" data-icon="x"></span></button>
+    <h2><span class="icon" data-icon="printer"></span>Cetak Laporan Riwayat</h2>
+    <p class="sub">Pilih rentang tanggal. Laporan PDF memuat AKG, jumlah Porsi Besar (PB) &amp; Porsi Kecil (PK), dan foto menu.</p>
+    <div class="grid2">
+      <div class="field"><label><span class="icon" data-icon="calendar"></span>Dari Tanggal</label><input type="date" id="pFrom"></div>
+      <div class="field"><label><span class="icon" data-icon="calendar"></span>Sampai Tanggal</label><input type="date" id="pTo"></div>
+    </div>
+    <div class="print-presets">
+      <button class="preset-chip" data-preset="7" type="button">7 hari terakhir</button>
+      <button class="preset-chip" data-preset="30" type="button">30 hari terakhir</button>
+      <button class="preset-chip" data-preset="all" type="button">Semua riwayat</button>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="t-label"><span class="icon" data-icon="image"></span>Sertakan Foto Menu</div>
+        <div class="t-sub">Foto porsi besar &amp; kecil. Matikan agar proses lebih cepat &amp; file lebih ringan.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="pImages" checked><span class="slider"></span></label>
+    </div>
+    <div class="print-count" id="pCount"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close type="button">Batal</button>
+      <button class="btn btn-primary" id="printGoBtn" type="button"><span class="icon" data-icon="save"></span>Unduh PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ MODAL TAMBAH MENU ============ -->
 <div class="modal-overlay" id="menuModal">
   <div class="modal">
@@ -1016,15 +1078,7 @@ footer{text-align:center; font-family:var(--font-mono); font-size:11px; color:va
 /* =========================================================
    KONFIGURASI
    ========================================================= */
-/* ★ UBAH DI SINI ★ — WAJIB diisi jika file ini di-hosting di
-   Vercel/Netlify. Isi dengan URL web app Apps Script yang
-   BERAKHIRAN /exec (salin persis dari "Manage deployments",
-   BUKAN dari "Test deployments" yang berakhiran /dev).
-   Contoh: 'https://script.google.com/macros/s/AKfycb.../exec'
-   Jika file dipakai sebagai Index.html DI DALAM Apps Script,
-   biarkan kosong — koneksi otomatis lewat google.script.run. */
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw0xu66XaDJaHS-t47AR8GpdkRGik6y_oe-4e_ZjNOgDEjLRcfAc8a4hvoS2QaFTkqW/exec';
-
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzNcOIyHSSMHP2F2jP-FQUCdB0St0r3yMMw0f9Z4Nc-VuQnesi_xxArrnbuypVr-us7/exec'; // ← isi URL web app (/exec) HANYA jika file ini dihosting TERPISAH dari Apps Script
 const MAX_GAMBAR = 3;
 const MAX_VIDEO_DURATION = 15;   // detik (sama dengan backend)
 const MAX_VIDEO_MB = 30;         // perkiraan batas ukuran upload
@@ -1069,6 +1123,7 @@ const I = {
   check:'<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
   save:'<svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
   shield:'<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>',
+  printer:'<svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
   arrowL:'<svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>'
 };
 const ic = (n, cls) => '<span class="icon ' + (cls||'') + '">' + (I[n]||'') + '</span>';
@@ -1103,92 +1158,24 @@ function getVideoDuration(file){
 const Toast = Swal.mixin({ toast:true, position:'top', showConfirmButton:false, timer:2600, timerProgressBar:true });
 
 /* =========================================================
-   API LAYER — V2
-   • MODE 1: di dalam GAS → google.script.run (semua action).
-   • MODE 2: hosting terpisah (Vercel/Netlify) →
-       - Aksi BACA  → GET ?action=... (doGet mendukung semua)
-       - Aksi TULIS → POST text/plain (bebas preflight CORS)
+   API LAYER
    ========================================================= */
-const READ_ACTIONS = ['ping','today','bydate','history','menudetail','target','instansi','rating','fetchimages','fetchvideo'];
-
-function gasBase(){
-  return (typeof GAS_API_URL === 'string' ? GAS_API_URL : '').trim();
-}
-
-function parseApiResponse(txt){
-  let json;
-  try { json = JSON.parse(txt); }
-  catch(e){
-    throw new Error('Respons server bukan JSON. Pastikan deployment GAS memakai akses "Anyone" dan URL berakhiran /exec.');
-  }
-  return json;
-}
-
 function callApi(action, payload){
-  const req = Object.assign({ action: action }, payload || {});
-
-  return new Promise((resolve, reject) => {
-    /* --- MODE 1: berjalan di dalam Apps Script --- */
-    if (window.google && google.script && google.script.run) {
+  const req = Object.assign({ action: action }, payload||{});
+  return new Promise((resolve, reject)=>{
+    if (window.google && google.script && google.script.run){
       google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(err => reject(new Error((err && err.message) || 'Koneksi ke server gagal.')))
         .apiHandler(req);
-      return;
-    }
-
-    /* --- MODE 2: hosting terpisah (Vercel/Netlify/local) --- */
-    const base = gasBase();
-    if (!base) {
-      reject(new Error('GAS_API_URL belum diisi. Buka index.html, isi konstanta GAS_API_URL dengan URL /exec dari Manage deployments.'));
-      return;
-    }
-    if (base.indexOf('/dev') !== -1) {
-      reject(new Error('GAS_API_URL masih memakai /dev (wajib login Google). Ganti dengan URL /exec dari Manage deployments.'));
-      return;
-    }
-
-    if (READ_ACTIONS.indexOf(action) !== -1) {
-      /* Aksi baca → GET (paling stabil lintas domain, tanpa preflight) */
-      const qs = new URLSearchParams();
-      qs.set('action', action);
-      Object.keys(req).forEach(k => {
-        if (k === 'action' || req[k] == null) return;
-        qs.set(k, typeof req[k] === 'object' ? JSON.stringify(req[k]) : String(req[k]));
-      });
-      fetch(base + '?' + qs.toString(), { method:'GET', cache:'no-store', redirect:'follow' })
-        .then(r => r.text())
-        .then(txt => resolve(parseApiResponse(txt)))
-        .catch(() => reject(new Error('Koneksi ke server Google gagal (CORS/network). Pastikan deployment GAS: "Who has access: Anyone".')));
+    } else if (GAS_API_URL){
+      fetch(GAS_API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(req) })
+        .then(r => r.json()).then(resolve)
+        .catch(()=> reject(new Error('Server tidak membalas JSON. Pastikan membuka URL /exec.')));
     } else {
-      /* Aksi tulis → POST text/plain (payload base64 besar, tanpa preflight) */
-      fetch(base, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(req),
-        redirect: 'follow'
-      })
-        .then(r => r.text())
-        .then(txt => resolve(parseApiResponse(txt)))
-        .catch(() => reject(new Error('Koneksi ke server Google gagal (CORS/network). Pastikan deployment GAS: "Who has access: Anyone".')));
+      reject(new Error('API belum terhubung. Deploy file ini ke Apps Script (nama Index) atau isi GAS_API_URL.'));
     }
   });
-}
-
-/* ===== Banner diagnosa: dicek sekali saat halaman dibuka ===== */
-async function checkApiConnection(){
-  try{
-    const res = await callApi('ping');
-    if (res && res.success === false) throw new Error(res.message || 'API menjawab error.');
-  }catch(err){
-    const b = $('apiBanner');
-    if(!b) return;
-    b.innerHTML = ic('info') +
-      '<div><b>Koneksi ke server Google Apps Script gagal.</b>' +
-      esc(err.message) +
-      '<small>Checklist: 1) GAS_API_URL di index.html = URL /exec dari Manage deployments &nbsp;2) Deployment "Who has access: Anyone" &nbsp;3) Code.gs sudah di-deploy ulang (New version) &nbsp;4) Cek manual: buka URL /exec?action=ping di browser — harus muncul JSON "version":"V2".</small></div>';
-    b.classList.add('show');
-  }
 }
 
 /* =========================================================
@@ -1208,7 +1195,7 @@ const state = {
 };
 
 /* =========================================================
-   LOADING HELPERS
+   TOAST / LOADING HELPERS
    ========================================================= */
 const loadingHTML = '<div class="empty-note"><span class="dots"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></span><span>Memuat data…</span></div>';
 const errorHTML = msg => '<div class="empty-note">' + ic('info') + '<span>' + esc(msg) + '</span></div>';
@@ -1317,7 +1304,7 @@ function setupSlideshow(root, view){
         const img = new Image();
         img.className = 'slide-img';
         img.src = s.src; img.alt = '';
-        img.onerror = ()=>{ img.remove(); if(this.slides.length > 1) this.show(this.idx+1); };
+        img.onerror = ()=>{ img.remove(); if(this.slides.length) this.show(this.idx+1); };
         vp.insertAdjacentElement('afterbegin', img);
         this._progress(IMAGE_SLIDE_MS);
         this.timer = setTimeout(()=>this.show(this.idx+1), IMAGE_SLIDE_MS);
@@ -1402,6 +1389,7 @@ function setupSlideshow(root, view){
     const d = e.target.closest('.dot'); if(d) api.show(+d.dataset.slide);
   });
 
+  // Swipe di perangkat sentuh
   let tsx=0, tsy=0;
   vp.addEventListener('touchstart', e=>{ tsx=e.touches[0].clientX; tsy=e.touches[0].clientY; }, {passive:true});
   vp.addEventListener('touchend', e=>{
@@ -1409,6 +1397,7 @@ function setupSlideshow(root, view){
     if(Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)*1.5){ dx < 0 ? api.next() : api.prev(); }
   }, {passive:true});
 
+  // Hover: pause hanya untuk slide gambar (video terus berjalan sesuai durasinya)
   vp.addEventListener('mouseenter', ()=>{ api.pauseImg(); pauseAutoToggle(view); });
   vp.addEventListener('mouseleave', ()=>{ api.resumeImg(); resumeAutoToggle(view); });
 
@@ -1452,7 +1441,7 @@ function moveIndicator(view){
 }
 
 /* =========================================================
-   RENDER MENU (Hari Ini & Detail Riwayat)
+   RENDER MENU (dipakai Hari Ini & Detail Riwayat)
    ========================================================= */
 const VF = {
   today: { date:'todayDate', name:'todayName', desc:'todayDesc', badge:'todayRatingBadge', avg:'todayRatingAvg', cnt:'todayRatingCount', card:'menuCard', del:'delTodayBtn', pre:'today' },
@@ -1529,6 +1518,7 @@ function renderPorsiTotal(view, menu, p){
     ic('users') + '<div><div class="num">' + n + '</div><div class="lbl">Porsi ' + (isB?'Besar':'Kecil') + ' Didistribusikan</div></div>';
 }
 
+/* ===== Detail collapse ===== */
 function syncDetailBody(view){
   const body = $('detailBody-'+view);
   if(body && !body.classList.contains('collapsed')) body.style.maxHeight = body.scrollHeight + 'px';
@@ -1799,7 +1789,7 @@ async function confirmDelete(id){
     confirmButtonColor:'#d95757', reverseButtons:true
   });
   if(!r.isConfirmed) return false;
-  const res = await callApi('deletemenu', {id:id, username:state.admin.username, password:state.admin.password, enforce_age_days:3});
+  const res = await callApi('deletemenu', {id:id, username:state.admin.username, password:state.admin.password});
   if(res && res.success){
     Toast.fire({icon:'success', title:res.message || 'Menu dihapus.'});
     return true;
@@ -1846,9 +1836,8 @@ function applyAdminUI(){
   } else {
     lb.innerHTML = ic('logIn') + '<span>Login Admin</span>';
   }
-  if(state.menuToday){ refreshRatingAdmin('today'); }
+  if(state.menuToday){ refreshRatingAdmin('today'); loadHistory(true).then(()=>{}); }
   if(state.menuHist) refreshRatingAdmin('hist');
-  if(state.histLoaded) loadHistory(true);
 }
 function doLogin(){
   const u = $('loginUser').value.trim(), p = $('loginPass').value;
@@ -1869,7 +1858,7 @@ function doLogin(){
       msg.classList.add('err');
     }
   }).catch(err=>{
-    msg.textContent = err.message;
+    msg.textContent = 'Server tidak membalas JSON. Pastikan membuka URL /exec.';
     msg.classList.add('err');
   }).finally(()=>{ btn.disabled = false; });
 }
@@ -1975,7 +1964,7 @@ async function saveMenu(){
     instansi:instansi,
     besar: buildPortion('besar'), kecil: buildPortion('kecil')
   };
-  Swal.fire({ title:'Menyimpan menu… (mohon tunggu, media diunggah)', didOpen:()=>Swal.showLoading(), allowOutsideClick:false, allowEscapeKey:false });
+  Swal.fire({ title:'Menyimpan menu…', didOpen:()=>Swal.showLoading(), allowOutsideClick:false, allowEscapeKey:false });
   try{
     const res = await callApi('savemenu', payload);
     Swal.close();
@@ -1997,19 +1986,561 @@ async function saveMenu(){
   }
 }
 
+
+/* =========================================================
+   CETAK LAPORAN RIWAYAT (PDF) — UI & pengambilan gambar
+   ========================================================= */
+/*__PDF_BUILDER_START__*/
+/* =========================================================
+   LAPORAN PDF — builder murni (tanpa DOM)
+   Input : menu riwayat (+ gambar yang sudah di-resize), target AKG
+   Output: objek jsPDF siap di-save()
+   ========================================================= */
+const PDF_C = {
+  ink:[16,37,27], soft:[83,102,91], faint:[139,154,145], line:[223,232,226],
+  green:[23,134,90], greenDark:[15,107,71], paper:[244,247,245], white:[255,255,255],
+  energi:[240,138,60], protein:[217,87,87], lemak:[214,165,45], karbo:[23,134,90], serat:[63,120,155]
+};
+const PDF_HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const PDF_BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+function pdfTgl(iso, mode){
+  const p = String(iso || '').split('-');
+  if (p.length !== 3) return String(iso || '');
+  const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  if (isNaN(d.getTime())) return String(iso || '');
+  if (mode === 'short') return d.getDate() + ' ' + PDF_BULAN[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear();
+  return PDF_HARI[d.getDay()] + ', ' + d.getDate() + ' ' + PDF_BULAN[d.getMonth()] + ' ' + d.getFullYear();
+}
+function pdfNum(n){
+  return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+function pdfVal(n){
+  const v = Number(n) || 0;
+  return (Math.round(v * 10) / 10).toString().replace('.', ',');
+}
+function pdfUnit(u, fallback){
+  const s = String(u || '').trim();
+  if (!s) return fallback;
+  return /^gram$/i.test(s) ? 'g' : s;
+}
+
+function buildLaporanPdf(JsPDF, cfg){
+  const C = PDF_C;
+  const doc = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const PW = 210, PH = 297, M = 14, CW = PW - 2 * M;
+  const TOP = 16, BOT = PH - 16;
+  const menus = cfg.menus || [];
+  const target = cfg.target || {};
+  const withImages = !!cfg.withImages;
+  const periode = pdfTgl(cfg.from, 'short') + '  s.d.  ' + pdfTgl(cfg.to, 'short');
+  let y = TOP;
+
+  const fill = c => doc.setFillColor(c[0], c[1], c[2]);
+  const stroke = c => doc.setDrawColor(c[0], c[1], c[2]);
+  const ink = c => doc.setTextColor(c[0], c[1], c[2]);
+  const font = (style, size) => { doc.setFont('helvetica', style); doc.setFontSize(size); };
+  const newPage = () => { doc.addPage(); y = TOP; };
+  const need = h => { if (y + h > BOT) { newPage(); return true; } return false; };
+
+  // potong teks agar muat 1 baris pada lebar tertentu
+  function fit(text, maxW){
+    let t = String(text == null ? '' : text);
+    if (doc.getTextWidth(t) <= maxW) return t;
+    while (t.length > 1 && doc.getTextWidth(t + '...') > maxW) t = t.slice(0, -1);
+    return t.trimEnd() + '...';
+  }
+  // bungkus teks, batasi jumlah baris (sisa dipotong dengan "...")
+  function wrap(text, maxW, maxLines){
+    const lines = doc.splitTextToSize(String(text || ''), maxW);
+    if (lines.length <= maxLines) return lines;
+    const cut = lines.slice(0, maxLines);
+    cut[maxLines - 1] = fit(cut[maxLines - 1] + ' ...', maxW);
+    return cut;
+  }
+
+  const NUTRI = [
+    { key: 'energi',      tk: 'Energi',      label: 'Energi',      unit: 'Kkal', col: C.energi },
+    { key: 'protein',     tk: 'Protein',     label: 'Protein',     unit: 'g',    col: C.protein },
+    { key: 'lemak',       tk: 'Lemak',       label: 'Lemak',       unit: 'g',    col: C.lemak },
+    { key: 'karbohidrat', tk: 'Karbohidrat', label: 'Karbohidrat', unit: 'g',    col: C.karbo },
+    { key: 'serat',       tk: 'Serat',       label: 'Serat',       unit: 'g',    col: C.serat }
+  ];
+  const tInfo = n => target[n.tk] || {};
+  const tVal = n => Number(tInfo(n).target) || 0;
+  const tUnit = n => pdfUnit(tInfo(n).satuan, n.unit);
+
+  /* ---------------- totals ---------------- */
+  const totPB = menus.reduce((s, m) => s + (Number(m.jumlah_porsi_besar) || 0), 0);
+  const totPK = menus.reduce((s, m) => s + (Number(m.jumlah_porsi_kecil) || 0), 0);
+
+  /* ================= HALAMAN 1: JUDUL + RINGKASAN ================= */
+  font('bold', 8.5); ink(C.green);
+  doc.text('SPPG KOTA SERANG  |  TAKTAKAN KURANJI 2', M, y + 3);
+  y += 9;
+  font('bold', 22); ink(C.ink);
+  doc.text('Laporan Riwayat Menu MBG', M, y + 6);
+  y += 12;
+  font('normal', 10); ink(C.soft);
+  doc.text('Angka Kecukupan Gizi (AKG), Jumlah Porsi & Dokumentasi Menu', M, y + 2);
+  y += 9;
+
+  // kotak info
+  fill(C.paper); stroke(C.line); doc.setLineWidth(0.25);
+  doc.roundedRect(M, y, CW, 17, 2.5, 2.5, 'FD');
+  const printed = cfg.printedAt instanceof Date ? cfg.printedAt : new Date();
+  const printedStr = printed.getDate() + ' ' + PDF_BULAN[printed.getMonth()] + ' ' + printed.getFullYear() +
+    ', ' + String(printed.getHours()).padStart(2, '0') + ':' + String(printed.getMinutes()).padStart(2, '0') + ' WIB';
+  font('bold', 7); ink(C.faint);
+  doc.text('PERIODE', M + 5, y + 5.5);
+  doc.text('DICETAK', M + 92, y + 5.5);
+  font('bold', 10); ink(C.ink);
+  doc.text(periode, M + 5, y + 11.5);
+  font('bold', 9); doc.text(printedStr, M + 92, y + 11.5);
+  if (cfg.admin) {
+    font('normal', 7.5); ink(C.soft);
+    doc.text('oleh ' + cfg.admin, M + 92, y + 15);
+  }
+  y += 17 + 6;
+
+  // 4 kartu ringkasan
+  const gap = 4, cw = (CW - gap * 3) / 4;
+  const cards = [
+    { v: pdfNum(menus.length),      l: 'TOTAL MENU',         col: C.ink },
+    { v: pdfNum(totPB),             l: 'PORSI BESAR (PB)',   col: C.green },
+    { v: pdfNum(totPK),             l: 'PORSI KECIL (PK)',   col: C.serat },
+    { v: pdfNum(totPB + totPK),     l: 'TOTAL PORSI',        col: C.energi }
+  ];
+  cards.forEach((c, i) => {
+    const x = M + i * (cw + gap);
+    fill(C.white); stroke(C.line); doc.roundedRect(x, y, cw, 20, 2.5, 2.5, 'FD');
+    fill(c.col); doc.roundedRect(x, y, 1.6, 20, 0.8, 0.8, 'F');
+    font('bold', 17); ink(c.col); doc.text(c.v, x + 6, y + 10.5);
+    font('bold', 6.8); ink(C.faint); doc.text(c.l, x + 6, y + 16);
+  });
+  y += 20 + 6;
+
+  // baris target AKG
+  const hasTarget = NUTRI.some(n => tVal(n) > 0);
+  if (hasTarget) {
+    fill(C.paper); stroke(C.line);
+    doc.roundedRect(M, y, CW, 15, 2.5, 2.5, 'FD');
+    font('bold', 7); ink(C.faint);
+    doc.text('TARGET AKG PER PORSI', M + 5, y + 5.5);
+    const colW = (CW - 10) / NUTRI.length;
+    NUTRI.forEach((n, i) => {
+      const x = M + 5 + i * colW;
+      fill(n.col); doc.circle(x + 1.2, y + 10.6, 1.1, 'F');
+      font('bold', 8.5); ink(C.ink);
+      doc.text(n.label + ' ' + pdfVal(tVal(n)) + ' ' + tUnit(n), x + 3.6, y + 11.5);
+    });
+    y += 15 + 8;
+  }
+
+  /* ================= REKAP TABEL ================= */
+  font('bold', 12); ink(C.ink);
+  doc.text('Rekap Distribusi Porsi', M, y + 4);
+  y += 8;
+
+  const RC = [10, 38, 68, 22, 22, 22]; // total 182
+  const rx = [M]; RC.forEach((w, i) => rx.push(rx[i] + w));
+  function rekapHeader(){
+    fill(C.greenDark); doc.rect(M, y, CW, 8, 'F');
+    font('bold', 8); ink(C.white);
+    doc.text('No', rx[0] + 3, y + 5.2);
+    doc.text('Tanggal', rx[1] + 3, y + 5.2);
+    doc.text('Nama Menu', rx[2] + 3, y + 5.2);
+    doc.text('PB', rx[4] - 3, y + 5.2, { align: 'right' });
+    doc.text('PK', rx[5] - 3, y + 5.2, { align: 'right' });
+    doc.text('Total', rx[6] - 3, y + 5.2, { align: 'right' });
+    y += 8;
+  }
+  rekapHeader();
+  menus.forEach((m, i) => {
+    if (y + 7 > BOT) { newPage(); rekapHeader(); }
+    if (i % 2 === 1) { fill(C.paper); doc.rect(M, y, CW, 7, 'F'); }
+    const pb = Number(m.jumlah_porsi_besar) || 0, pk = Number(m.jumlah_porsi_kecil) || 0;
+    font('normal', 8.5); ink(C.ink);
+    doc.text(String(i + 1), rx[0] + 3, y + 4.8);
+    doc.text(pdfTgl(m.tanggal, 'short'), rx[1] + 3, y + 4.8);
+    doc.text(fit(m.nama_menu, RC[2] - 6), rx[2] + 3, y + 4.8);
+    doc.text(pdfNum(pb), rx[4] - 3, y + 4.8, { align: 'right' });
+    doc.text(pdfNum(pk), rx[5] - 3, y + 4.8, { align: 'right' });
+    font('bold', 8.5);
+    doc.text(pdfNum(pb + pk), rx[6] - 3, y + 4.8, { align: 'right' });
+    stroke(C.line); doc.setLineWidth(0.15); doc.line(M, y + 7, M + CW, y + 7);
+    y += 7;
+  });
+  // baris total
+  if (y + 8 > BOT) { newPage(); rekapHeader(); }
+  fill(C.ink); doc.rect(M, y, CW, 8, 'F');
+  font('bold', 8.5); ink(C.white);
+  doc.text('TOTAL', rx[0] + 3, y + 5.3);
+  doc.text(pdfNum(totPB), rx[4] - 3, y + 5.3, { align: 'right' });
+  doc.text(pdfNum(totPK), rx[5] - 3, y + 5.3, { align: 'right' });
+  doc.text(pdfNum(totPB + totPK), rx[6] - 3, y + 5.3, { align: 'right' });
+  y += 8;
+
+  /* ================= DETAIL PER MENU ================= */
+  const CELL_GAP = 4, MAXIMG = 3;
+  const CELL_W = (CW - CELL_GAP * (MAXIMG - 1)) / MAXIMG;
+  const CELL_H = 40;
+
+  function photoBlockH(p){
+    if (!withImages) return 0;
+    const n = (p && Array.isArray(p.gambar)) ? Math.min(p.gambar.length, MAXIMG) : 0;
+    return n > 0 ? (6 + CELL_H + 5) : 7;
+  }
+
+  function drawPhotoBlock(p, label, col){
+    if (!withImages) return;
+    const total = (p && Array.isArray(p.gambar)) ? Math.min(p.gambar.length, MAXIMG) : 0;
+    fill(col); doc.roundedRect(M, y + 0.6, 2.4, 3.4, 0.6, 0.6, 'F');
+    font('bold', 8.5); ink(C.ink);
+    doc.text(label, M + 4.5, y + 3.6);
+    const labelW = doc.getTextWidth(label);
+    if (total === 0) {
+      font('italic', 8); ink(C.faint);
+      doc.text('- tidak ada foto', M + 4.5 + labelW + 2.5, y + 3.6);
+      y += 7;
+      return;
+    }
+    y += 6;
+    const imgs = (p && p.imgs) || [];
+    for (let i = 0; i < total; i++) {
+      const x = M + i * (CELL_W + CELL_GAP);
+      fill(C.paper); stroke(C.line); doc.setLineWidth(0.25);
+      doc.roundedRect(x, y, CELL_W, CELL_H, 2, 2, 'FD');
+      const im = imgs[i];
+      if (im && im.data) {
+        const sc = Math.min((CELL_W - 2) / im.w, (CELL_H - 2) / im.h);
+        const dw = im.w * sc, dh = im.h * sc;
+        try {
+          doc.addImage(im.data, 'JPEG', x + (CELL_W - dw) / 2, y + (CELL_H - dh) / 2, dw, dh, undefined, 'FAST');
+        } catch (e) {
+          font('italic', 7.5); ink(C.faint);
+          doc.text('Gambar tidak dapat ditampilkan', x + CELL_W / 2, y + CELL_H / 2, { align: 'center' });
+        }
+      } else {
+        font('italic', 7.5); ink(C.faint);
+        doc.text('Gambar tidak dapat dimuat', x + CELL_W / 2, y + CELL_H / 2, { align: 'center' });
+      }
+    }
+    y += CELL_H + 5;
+  }
+
+  function drawMenu(m){
+    font('bold', 14);
+    const nameLines = wrap(m.nama_menu || '-', CW, 2);
+    const desc = String(m.deskripsi || '').trim();
+    font('normal', 9);
+    const descLines = desc ? wrap(desc, CW, 4) : [];
+    const h = 9 + 5 + nameLines.length * 6 + (descLines.length ? descLines.length * 4.2 + 4 : 2) +
+              12 + 5 +            // chip PB/PK/Total
+              8 + 5 * 7 + 5 +     // tabel AKG
+              photoBlockH(m.besar) + photoBlockH(m.kecil);
+    need(h);
+
+    // pita tanggal
+    fill(C.green); doc.roundedRect(M, y, CW, 9, 2.2, 2.2, 'F');
+    font('bold', 10); ink(C.white);
+    doc.text(pdfTgl(m.tanggal, 'long'), M + 4, y + 6);
+    if (m.batas_konsumsi) {
+      font('normal', 8.5);
+      doc.text('Batas konsumsi ' + m.batas_konsumsi + ' WIB', M + CW - 4, y + 5.9, { align: 'right' });
+    }
+    y += 9 + 5;
+
+    // nama & deskripsi
+    font('bold', 14); ink(C.ink);
+    nameLines.forEach(l => { doc.text(l, M, y + 4.6); y += 6; });
+    if (descLines.length) {
+      y += 1;
+      font('normal', 9); ink(C.soft);
+      descLines.forEach(l => { doc.text(l, M, y + 3.4); y += 4.2; });
+      y += 3;
+    } else { y += 2; }
+
+    // chip PB / PK / Total
+    const pb = Number(m.jumlah_porsi_besar) || 0, pk = Number(m.jumlah_porsi_kecil) || 0;
+    const g = 4, w = (CW - g * 2) / 3;
+    const chips = [
+      { l: 'PORSI BESAR (PB)', v: pdfNum(pb) + ' porsi', col: C.green },
+      { l: 'PORSI KECIL (PK)', v: pdfNum(pk) + ' porsi', col: C.serat },
+      { l: 'TOTAL DISTRIBUSI', v: pdfNum(pb + pk) + ' porsi', col: C.ink }
+    ];
+    chips.forEach((c, i) => {
+      const x = M + i * (w + g);
+      fill(C.white); stroke(C.line); doc.setLineWidth(0.25);
+      doc.roundedRect(x, y, w, 12, 2.2, 2.2, 'FD');
+      font('bold', 6.5); ink(C.faint); doc.text(c.l, x + 4, y + 4.5);
+      font('bold', 11); ink(c.col); doc.text(c.v, x + 4, y + 9.6);
+    });
+    y += 12 + 5;
+
+    // tabel AKG
+    const TC = [50, 30, 32, 20, 32, 18]; // total 182
+    const tx = [M]; TC.forEach((cwid, i) => tx.push(tx[i] + cwid));
+    fill(C.greenDark); doc.rect(M, y, CW, 8, 'F');
+    font('bold', 8); ink(C.white);
+    doc.text('Zat Gizi', tx[0] + 3, y + 5.2);
+    doc.text('Target AKG', tx[2] - 3, y + 5.2, { align: 'right' });
+    doc.text('Porsi Besar (PB)', tx[3] - 3, y + 5.2, { align: 'right' });
+    doc.text('% AKG', tx[4] - 3, y + 5.2, { align: 'right' });
+    doc.text('Porsi Kecil (PK)', tx[5] - 3, y + 5.2, { align: 'right' });
+    doc.text('% AKG', tx[6] - 3, y + 5.2, { align: 'right' });
+    y += 8;
+    NUTRI.forEach((n, i) => {
+      if (i % 2 === 1) { fill(C.paper); doc.rect(M, y, CW, 7, 'F'); }
+      const vb = Number(m.besar && m.besar[n.key]) || 0;
+      const vk = Number(m.kecil && m.kecil[n.key]) || 0;
+      const t = tVal(n), u = tUnit(n);
+      fill(n.col); doc.circle(tx[0] + 4, y + 3.5, 1.3, 'F');
+      font('bold', 8.8); ink(C.ink); doc.text(n.label, tx[0] + 8, y + 4.8);
+      font('normal', 8.8); ink(C.soft);
+      doc.text(t ? pdfVal(t) + ' ' + u : '-', tx[2] - 3, y + 4.8, { align: 'right' });
+      ink(C.ink);
+      doc.text(pdfVal(vb) + ' ' + u, tx[3] - 3, y + 4.8, { align: 'right' });
+      doc.text(pdfVal(vk) + ' ' + u, tx[5] - 3, y + 4.8, { align: 'right' });
+      font('bold', 8.8); ink(C.green);
+      doc.text(t ? Math.round(vb / t * 100) + '%' : '-', tx[4] - 3, y + 4.8, { align: 'right' });
+      ink(C.serat);
+      doc.text(t ? Math.round(vk / t * 100) + '%' : '-', tx[6] - 3, y + 4.8, { align: 'right' });
+      stroke(C.line); doc.setLineWidth(0.15); doc.line(M, y + 7, M + CW, y + 7);
+      y += 7;
+    });
+    y += 5;
+
+    // foto
+    drawPhotoBlock(m.besar, 'Foto Porsi Besar (PB)', C.green);
+    drawPhotoBlock(m.kecil, 'Foto Porsi Kecil (PK)', C.serat);
+    y += 4; // jarak antar menu
+  }
+
+  if (menus.length) {
+    newPage();
+    font('bold', 12); ink(C.ink);
+    doc.text('Detail Menu per Tanggal', M, y + 4);
+    y += 9;
+    menus.forEach(drawMenu);
+  }
+
+  /* ================= HEADER / FOOTER SEMUA HALAMAN ================= */
+  const total = doc.getNumberOfPages();
+  for (let i = 1; i <= total; i++) {
+    doc.setPage(i);
+    fill(C.green); doc.rect(0, 0, PW, 4, 'F');
+    if (i > 1) {
+      font('normal', 7.5); ink(C.faint);
+      doc.text('Laporan Riwayat Menu MBG & AKG  |  ' + periode, M, 10);
+    }
+    stroke(C.line); doc.setLineWidth(0.2); doc.line(M, PH - 12, PW - M, PH - 12);
+    font('normal', 7.5); ink(C.faint);
+    doc.text('Sistem Monitoring Menu MBG & AKG - SPPG Kota Serang, Taktakan Kuranji 2', M, PH - 7.5);
+    doc.text('Halaman ' + i + ' dari ' + total, PW - M, PH - 7.5, { align: 'right' });
+  }
+  return doc;
+}
+/*__PDF_BUILDER_END__*/
+
+function addDaysISO(iso, n){
+  const p = String(iso).split('-');
+  const d = new Date(+p[0], +p[1]-1, +p[2], 12);
+  d.setDate(d.getDate() + n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function menusInPrintRange(){
+  const from = $('pFrom').value, to = $('pTo').value;
+  if(!from || !to) return [];
+  return (state.histList || []).filter(m => m.tanggal >= from && m.tanggal <= to);
+}
+function updatePrintCount(){
+  const el = $('pCount'), btn = $('printGoBtn');
+  const from = $('pFrom').value, to = $('pTo').value;
+  const warn = msg => { el.textContent = msg; el.className = 'print-count warn'; btn.disabled = true; };
+  if(!from || !to) return warn('Pilih tanggal awal dan tanggal akhir.');
+  if(from > to) return warn('Tanggal awal tidak boleh setelah tanggal akhir.');
+  const list = menusInPrintRange();
+  if(!list.length) return warn('Tidak ada menu riwayat pada rentang tanggal ini.');
+  const pb = list.reduce((a,m)=>a+(Number(m.jumlah_porsi_besar)||0), 0);
+  const pk = list.reduce((a,m)=>a+(Number(m.jumlah_porsi_kecil)||0), 0);
+  el.textContent = list.length + ' menu  |  ' + pb + ' PB  |  ' + pk + ' PK';
+  el.className = 'print-count';
+  btn.disabled = false;
+}
+function applyPrintPreset(kind){
+  const dates = (state.histList || []).map(m => m.tanggal).sort();
+  if(!dates.length) return;
+  if(kind === 'all'){
+    $('pFrom').value = dates[0]; $('pTo').value = dates[dates.length-1];
+  } else {
+    const n = parseInt(kind, 10) || 7;
+    $('pFrom').value = addDaysISO(state.today, -n);
+    $('pTo').value = addDaysISO(state.today, -1);   // riwayat = sebelum hari ini
+  }
+  updatePrintCount();
+}
+async function openPrintModal(){
+  if(!state.admin){
+    openModal($('loginModal'));
+    Toast.fire({icon:'info', title:'Login admin terlebih dahulu'});
+    return;
+  }
+  if(!state.histLoaded){
+    Swal.fire({ title:'Memuat riwayat…', didOpen:()=>Swal.showLoading(), allowOutsideClick:false, allowEscapeKey:false });
+    await loadHistory(true);
+    Swal.close();
+  }
+  if(!(state.histList || []).length){
+    Swal.fire({icon:'info', title:'Belum ada riwayat', text:'Belum ada menu riwayat yang bisa dicetak.'});
+    return;
+  }
+  applyPrintPreset('7');
+  if(!menusInPrintRange().length) applyPrintPreset('all');   // 7 hari terakhir kosong -> tampilkan semua
+  openModal($('printModal'));
+}
+
+// ID file Drive dari URL thumbnail / link Drive / ID mentah (sama dengan logika backend)
+function driveIdFromUrl(u){
+  const str = String(u || '').trim();
+  if(!str || /^data:/i.test(str)) return '';
+  if(str.indexOf('http') !== 0 && str.indexOf('/') === -1) return str;
+  const m = str.match(/\/file\/d\/([-\w]+)/) || str.match(/[?&]id=([-\w]+)/);
+  return m ? m[1] : '';
+}
+// Perkecil gambar (maks 1000px, JPEG) supaya PDF tetap ringan. null jika gagal.
+function shrinkImage(src, maxSide, quality){
+  return new Promise(resolve=>{
+    const img = new Image();
+    if(!/^data:/i.test(src)) img.crossOrigin = 'anonymous';
+    img.onload = ()=>{
+      try{
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if(!w || !h){ resolve(null); return; }
+        const sc = Math.min(1, maxSide / Math.max(w, h));
+        w = Math.max(1, Math.round(w * sc)); h = Math.max(1, Math.round(h * sc));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve({ data: cv.toDataURL('image/jpeg', quality), w: w, h: h });
+      }catch(e){ resolve(null); }
+    };
+    img.onerror = ()=>resolve(null);
+    img.src = src;
+  });
+}
+async function getReportImage(src){
+  if(!src) return null;
+  let dataUrl = '';
+  if(/^data:image\//i.test(src)){ dataUrl = src; }
+  else {
+    const id = driveIdFromUrl(src);
+    if(id){
+      try{
+        const r = await callApi('fetchimage', { file_id: id });
+        if(r && r.success && r.dataUrl) dataUrl = r.dataUrl;
+      }catch(e){}
+    }
+    if(!dataUrl) dataUrl = src;
+  }
+  return shrinkImage(dataUrl, 1000, 0.78);
+}
+// Jalankan tugas async dengan batas paralel
+async function runPool(tasks, limit, onProgress){
+  let next = 0, done = 0;
+  async function worker(){
+    while(next < tasks.length){
+      const k = next++;
+      try{ await tasks[k](); }catch(e){}
+      done++;
+      if(onProgress) onProgress(done, tasks.length);
+    }
+  }
+  await Promise.all(Array.from({length: Math.min(limit, tasks.length)}, worker));
+}
+
+async function generateLaporan(){
+  if(!state.admin){ openModal($('loginModal')); return; }
+  const from = $('pFrom').value, to = $('pTo').value;
+  if(!from || !to || from > to){ updatePrintCount(); return; }
+  if(!(window.jspdf && window.jspdf.jsPDF)){
+    Swal.fire({icon:'error', title:'Pustaka PDF belum termuat', text:'Periksa koneksi internet, lalu muat ulang halaman ini.'});
+    return;
+  }
+  const withImages = $('pImages').checked;
+  // salinan data agar state riwayat tidak tercemar data gambar besar
+  const menus = menusInPrintRange()
+    .map(m => JSON.parse(JSON.stringify(m)))
+    .sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+  if(!menus.length){ updatePrintCount(); return; }
+
+  closeModal($('printModal'));
+  Swal.fire({
+    title:'Menyiapkan laporan…',
+    html:'<div id="pdfProg" style="font-size:13px;color:#53665b">Mengambil data…</div>',
+    didOpen:()=>Swal.showLoading(), allowOutsideClick:false, allowEscapeKey:false
+  });
+  const setProg = t => { const el = document.getElementById('pdfProg'); if(el) el.textContent = t; };
+
+  try{
+    let target = state.target;
+    if(!target || !target.Energi){
+      const rt = await callApi('target');
+      if(rt && rt.success) target = rt.data || {};
+    }
+
+    if(withImages){
+      const jobs = [];
+      menus.forEach(m => ['besar', 'kecil'].forEach(k=>{
+        const list = ((m[k] && m[k].gambar) || []).slice(0, MAX_GAMBAR);
+        m[k].imgs = new Array(list.length).fill(null);
+        list.forEach((src, i) => jobs.push(async ()=>{ m[k].imgs[i] = await getReportImage(src); }));
+      }));
+      if(jobs.length){
+        setProg('Mengambil foto 0 dari ' + jobs.length + '…');
+        await runPool(jobs, 3, (d, t) => setProg('Mengambil foto ' + d + ' dari ' + t + '…'));
+      }
+    }
+
+    setProg('Menyusun PDF…');
+    await new Promise(r => setTimeout(r, 30));   // beri kesempatan UI menampilkan pesan
+    const doc = buildLaporanPdf(window.jspdf.jsPDF, {
+      menus: menus, target: target || {}, from: from, to: to,
+      admin: state.admin.username, printedAt: new Date(), withImages: withImages
+    });
+    doc.save('Laporan-Riwayat-Menu-MBG_' + from + '_sd_' + to + '.pdf');
+    Swal.close();
+    Toast.fire({icon:'success', title:'Laporan PDF berhasil dibuat (' + menus.length + ' menu)', timer:3200});
+  }catch(err){
+    Swal.close();
+    Swal.fire({icon:'error', title:'Gagal membuat laporan', text: err.message || String(err)});
+  }
+}
+
 /* =========================================================
    INIT & BINDINGS
    ========================================================= */
 function init(){
+  // Suntik ikon statis
   document.querySelectorAll('[data-icon]').forEach(el=>{ el.innerHTML = I[el.dataset.icon] || ''; });
 
+  // Tabs & bottom nav
   document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
   document.querySelectorAll('[data-action="manage"]').forEach(b=>b.addEventListener('click', ()=>{
     if(!state.admin){ openModal($('loginModal')); Toast.fire({icon:'info', title:'Login admin terlebih dahulu'}); return; }
     resetMenuForm(); openModal($('menuModal'));
   }));
 
+  // Tombol header
   $('adminAddBtn').addEventListener('click', ()=>{ resetMenuForm(); openModal($('menuModal')); });
+  // Cetak laporan riwayat (PDF)
+  $('adminPrintBtn').addEventListener('click', openPrintModal);
+  $('printOpenBtn').addEventListener('click', openPrintModal);
+  $('pFrom').addEventListener('change', updatePrintCount);
+  $('pTo').addEventListener('change', updatePrintCount);
+  document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click', ()=>applyPrintPreset(b.dataset.preset)));
+  $('printGoBtn').addEventListener('click', generateLaporan);
   $('loginBtn').addEventListener('click', ()=>{ state.admin ? doLogout() : openModal($('loginModal')); });
   $('loginSubmit').addEventListener('click', doLogin);
   $('loginPass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
@@ -2020,14 +2551,17 @@ function init(){
     b.innerHTML = ic(show ? 'eyeOff' : 'eye');
   }));
 
+  // Modal close (overlay + tombol)
   document.querySelectorAll('.modal-overlay').forEach(ov=>{
     ov.addEventListener('click', e=>{ if(e.target === ov) closeModal(ov); });
   });
   document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click', ()=>closeModal(b.closest('.modal-overlay'))));
 
+  // Slideshow (kedua view)
   setupSlideshow($('slideshow-today'), 'today');
   setupSlideshow($('slideshow-hist'), 'hist');
 
+  // Tombol porsi
   ['today','hist'].forEach(v=>{
     const wrap = $('portionToggleWrap-'+v);
     wrap.querySelectorAll('.seg-btn').forEach(b=>b.addEventListener('click', ()=>setPortion(v, b.dataset.portion)));
@@ -2036,8 +2570,10 @@ function init(){
     bindCollapse(v);
   });
 
+  // Rating (kedua view)
   initRating('today'); initRating('hist');
 
+  // Riwayat: klik kartu & tombol hapus (event delegation)
   $('histList').addEventListener('click', async e=>{
     const del = e.target.closest('.hist-del');
     if(del){
@@ -2062,9 +2598,11 @@ function init(){
     if(ok){ state.histLoaded = false; loadToday(); }
   });
 
+  // Form menu: instansi
   $('addInstansiRow').addEventListener('click', ()=>addInstansiRow());
   $('mShowInstansi').addEventListener('change', e=>{ $('instansiSection').style.display = e.target.checked ? '' : 'none'; });
 
+  // Form menu: upload foto (per porsi)
   ['besar','kecil'].forEach(p=>{
     $('mImg-'+p).addEventListener('change', async e=>{
       const files = Array.from(e.target.files||[]);
@@ -2080,6 +2618,7 @@ function init(){
       e.target.value = '';
       renderMediaPreviews(p);
     });
+    // Form menu: upload video + validasi durasi otomatis
     $('mVid-'+p).addEventListener('change', async e=>{
       const f = e.target.files[0];
       if(!f) return;
@@ -2106,6 +2645,7 @@ function init(){
     });
   });
 
+  // Hapus media preview (delegasi)
   $('menuModal').addEventListener('click', e=>{
     const rmImg = e.target.closest('[data-rmimg]');
     if(rmImg){
@@ -2121,13 +2661,14 @@ function init(){
   });
   $('menuSaveBtn').addEventListener('click', saveMenu);
 
+  // Resize: re-posisi indikator & tinggi detail
   window.addEventListener('resize', ()=>{
     ['today','hist'].forEach(v=>{ moveIndicator(v); syncDetailBody(v); });
   });
   window.addEventListener('load', ()=>{ ['today','hist'].forEach(moveIndicator); });
 
+  // Mulai
   restoreAdmin();
-  checkApiConnection(); // diagnosa koneksi → banner error jelas jika gagal
   loadToday();
 }
 
