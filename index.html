@@ -1,27 +1,14 @@
 <!--
   =========================================================
-  Index.html — SATU-SATUNYA file frontend, dihosting LANGSUNG
-  dari Google Apps Script (tidak perlu Vercel/Netlify).
-
-  Cara pasang:
-  1. Di editor Apps Script (project yang sama dengan Code.gs),
-     klik + di samping "Files" > HTML > beri nama PERSIS: Index
-  2. Hapus isi bawaannya, tempel seluruh isi file ini.
-  3. Deploy > Manage deployments > klik pensil (Edit):
-       - Execute as    : Me
-       - Who has access: Anyone
-       - Version       : New version
-     lalu klik Deploy.
-  4. PENTING: gunakan URL yang berakhiran /exec (bukan /dev).
-  5. Jika dihosting TERPISAH dari GAS, isi konstanta GAS_API_URL
-     di bagian paling bawah <script> dengan URL web app Anda.
-
-  Fitur versi ini:
-  • Kolom "Batas Konsumsi" → kartu deadline rapi + countdown hidup
-  • Riwayat → galeri kartu ber-cover (foto, rating, chip media)
-  • Slideshow: gambar 5 detik; VIDEO berpindah slide TEPAT saat
-    durasi videonya habis (event 'ended'), progress bar mengikuti
-    durasi asli video; upload video divalidasi durasinya (≤15 dtk).
+  Index.html — Frontend MBG (hosting Vercel/Netlify/GAS)
+  =========================================================
+  VERSI V2-FRONTEND:
+  • callApi mendukung 2 mode:
+      - Di dalam GAS          → google.script.run
+      - Vercel/Netlify/luar   → GET (aksi baca) + POST text/plain (aksi tulis)
+  • Ping diagnosa otomatis saat halaman dibuka (banner error jelas).
+  • Fitur: Batas Konsumsi countdown, Riwayat galeri, slideshow video
+    berpindah tepat sesuai durasi video.
   =========================================================
 -->
 <!DOCTYPE html>
@@ -53,8 +40,7 @@
 html{scroll-behavior:smooth;}
 body{
   font-family:var(--font-body); color:var(--ink); line-height:1.6;
-  -webkit-font-smoothing:antialiased; min-height:100vh;
-  padding-bottom:48px;
+  -webkit-font-smoothing:antialiased; min-height:100vh; padding-bottom:48px;
   background:
     radial-gradient(circle at 5% 0%, rgba(23,134,90,.10), transparent 28%),
     radial-gradient(circle at 95% 10%, rgba(63,120,155,.08), transparent 25%),
@@ -84,6 +70,18 @@ body::before{
 .icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .icon-energi{color:var(--c-energi);} .icon-protein{color:var(--c-protein);}
 .icon-lemak{color:var(--c-lemak);} .icon-karbo{color:var(--c-karbo);} .icon-serat{color:var(--c-serat);}
+
+/* ================= API BANNER (diagnosa koneksi) ================= */
+.api-banner{
+  display:none; align-items:flex-start; gap:10px;
+  background:#fdecec; border:1px solid #f2c4c4; color:#8f2f2f;
+  border-radius:14px; padding:13px 15px; margin:18px 0 0;
+  font-size:13px; line-height:1.55;
+}
+.api-banner.show{display:flex; animation:fadeIn .3s ease both;}
+.api-banner .icon{width:18px;height:18px;flex-shrink:0;margin-top:2px;}
+.api-banner b{display:block;margin-bottom:3px;}
+.api-banner small{color:#a35454; font-size:11.5px; display:block; margin-top:5px;}
 
 /* ================= HEADER ================= */
 header.board{
@@ -167,7 +165,7 @@ section.view.active{display:block; animation:fadeIn .4s ease both;}
 .admin-delete-btn:hover{transform:scale(1.05); opacity:.92;}
 .admin-delete-btn .icon{width:14px;height:14px;}
 
-/* ================= BATAS KONSUMSI (kartu deadline) ================= */
+/* ================= BATAS KONSUMSI ================= */
 .batas-wrap:empty{display:none;}
 .batas-card{
   display:flex; align-items:center; gap:14px;
@@ -394,7 +392,7 @@ section.view.active{display:block; animation:fadeIn .4s ease both;}
 .rating-admin-instansi{font-weight:500; color:var(--ink-soft);}
 .rating-admin-saran{font-size:12.5px; color:var(--ink-soft); margin-top:4px; font-style:italic; line-height:1.45;}
 
-/* ================= RIWAYAT (galeri kartu) ================= */
+/* ================= RIWAYAT ================= */
 .hist-summary{
   font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
   color:var(--ink-faint); font-weight:700; margin:0 0 14px; display:flex; align-items:center; gap:6px;
@@ -518,10 +516,7 @@ section.view.active{display:block; animation:fadeIn .4s ease both;}
 .modal p.sub{color:#718078; font-size:13px; margin:0 0 20px;}
 .modal-body{display:flex; flex-direction:column; gap:4px;}
 .field{margin-bottom:14px;}
-.field label{
-  display:flex; align-items:center; gap:5px; font-size:12px; font-weight:800;
-  margin-bottom:6px; color:#53665b;
-}
+.field label{display:flex; align-items:center; gap:5px; font-size:12px; font-weight:800; margin-bottom:6px; color:#53665b;}
 .field label .icon{width:14px;height:14px;color:var(--c-serat);}
 .field input,.field textarea{
   width:100%; font-family:var(--font-body); font-size:14px; padding:10px 12px; min-height:44px;
@@ -558,7 +553,6 @@ section.view.active{display:block; animation:fadeIn .4s ease both;}
 .modal-msg{font-size:13px; margin-top:10px; min-height:18px;}
 .modal-msg:empty{display:none;}
 .modal-msg.err{color:var(--c-protein);}
-.modal-msg.ok{color:var(--c-karbo);}
 .close-x{
   position:absolute; top:18px; right:18px; background:none; border:none; cursor:pointer;
   color:var(--ink-faint); padding:6px; border-radius:9px; display:flex;
@@ -728,6 +722,8 @@ footer{text-align:center; font-family:var(--font-mono); font-size:11px; color:va
 </header>
 
 <div class="wrap">
+
+  <div class="api-banner" id="apiBanner"></div>
 
   <div class="tabs" role="tablist">
     <button class="tab-btn active" data-tab="today" type="button"><span class="icon" data-icon="sun"></span>Hari Ini</button>
@@ -1020,7 +1016,15 @@ footer{text-align:center; font-family:var(--font-mono); font-size:11px; color:va
 /* =========================================================
    KONFIGURASI
    ========================================================= */
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyrbtnbyiYy3Uu2pBfYbcQtdgbbclxwxs0T2bhNUSbkz94vwyhiSzhNFU8C7W7yHFq6/exec'; // ← isi URL web app (/exec) HANYA jika file ini dihosting TERPISAH dari Apps Script
+/* ★ UBAH DI SINI ★ — WAJIB diisi jika file ini di-hosting di
+   Vercel/Netlify. Isi dengan URL web app Apps Script yang
+   BERAKHIRAN /exec (salin persis dari "Manage deployments",
+   BUKAN dari "Test deployments" yang berakhiran /dev).
+   Contoh: 'https://script.google.com/macros/s/AKfycb.../exec'
+   Jika file dipakai sebagai Index.html DI DALAM Apps Script,
+   biarkan kosong — koneksi otomatis lewat google.script.run. */
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw0xu66XaDJaHS-t47AR8GpdkRGik6y_oe-4e_ZjNOgDEjLRcfAc8a4hvoS2QaFTkqW/exec';
+
 const MAX_GAMBAR = 3;
 const MAX_VIDEO_DURATION = 15;   // detik (sama dengan backend)
 const MAX_VIDEO_MB = 30;         // perkiraan batas ukuran upload
@@ -1099,24 +1103,92 @@ function getVideoDuration(file){
 const Toast = Swal.mixin({ toast:true, position:'top', showConfirmButton:false, timer:2600, timerProgressBar:true });
 
 /* =========================================================
-   API LAYER
+   API LAYER — V2
+   • MODE 1: di dalam GAS → google.script.run (semua action).
+   • MODE 2: hosting terpisah (Vercel/Netlify) →
+       - Aksi BACA  → GET ?action=... (doGet mendukung semua)
+       - Aksi TULIS → POST text/plain (bebas preflight CORS)
    ========================================================= */
+const READ_ACTIONS = ['ping','today','bydate','history','menudetail','target','instansi','rating','fetchimages','fetchvideo'];
+
+function gasBase(){
+  return (typeof GAS_API_URL === 'string' ? GAS_API_URL : '').trim();
+}
+
+function parseApiResponse(txt){
+  let json;
+  try { json = JSON.parse(txt); }
+  catch(e){
+    throw new Error('Respons server bukan JSON. Pastikan deployment GAS memakai akses "Anyone" dan URL berakhiran /exec.');
+  }
+  return json;
+}
+
 function callApi(action, payload){
-  const req = Object.assign({ action: action }, payload||{});
-  return new Promise((resolve, reject)=>{
-    if (window.google && google.script && google.script.run){
+  const req = Object.assign({ action: action }, payload || {});
+
+  return new Promise((resolve, reject) => {
+    /* --- MODE 1: berjalan di dalam Apps Script --- */
+    if (window.google && google.script && google.script.run) {
       google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(err => reject(new Error((err && err.message) || 'Koneksi ke server gagal.')))
         .apiHandler(req);
-    } else if (GAS_API_URL){
-      fetch(GAS_API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(req) })
-        .then(r => r.json()).then(resolve)
-        .catch(()=> reject(new Error('Server tidak membalas JSON. Pastikan membuka URL /exec.')));
+      return;
+    }
+
+    /* --- MODE 2: hosting terpisah (Vercel/Netlify/local) --- */
+    const base = gasBase();
+    if (!base) {
+      reject(new Error('GAS_API_URL belum diisi. Buka index.html, isi konstanta GAS_API_URL dengan URL /exec dari Manage deployments.'));
+      return;
+    }
+    if (base.indexOf('/dev') !== -1) {
+      reject(new Error('GAS_API_URL masih memakai /dev (wajib login Google). Ganti dengan URL /exec dari Manage deployments.'));
+      return;
+    }
+
+    if (READ_ACTIONS.indexOf(action) !== -1) {
+      /* Aksi baca → GET (paling stabil lintas domain, tanpa preflight) */
+      const qs = new URLSearchParams();
+      qs.set('action', action);
+      Object.keys(req).forEach(k => {
+        if (k === 'action' || req[k] == null) return;
+        qs.set(k, typeof req[k] === 'object' ? JSON.stringify(req[k]) : String(req[k]));
+      });
+      fetch(base + '?' + qs.toString(), { method:'GET', cache:'no-store', redirect:'follow' })
+        .then(r => r.text())
+        .then(txt => resolve(parseApiResponse(txt)))
+        .catch(() => reject(new Error('Koneksi ke server Google gagal (CORS/network). Pastikan deployment GAS: "Who has access: Anyone".')));
     } else {
-      reject(new Error('API belum terhubung. Deploy file ini ke Apps Script (nama Index) atau isi GAS_API_URL.'));
+      /* Aksi tulis → POST text/plain (payload base64 besar, tanpa preflight) */
+      fetch(base, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(req),
+        redirect: 'follow'
+      })
+        .then(r => r.text())
+        .then(txt => resolve(parseApiResponse(txt)))
+        .catch(() => reject(new Error('Koneksi ke server Google gagal (CORS/network). Pastikan deployment GAS: "Who has access: Anyone".')));
     }
   });
+}
+
+/* ===== Banner diagnosa: dicek sekali saat halaman dibuka ===== */
+async function checkApiConnection(){
+  try{
+    const res = await callApi('ping');
+    if (res && res.success === false) throw new Error(res.message || 'API menjawab error.');
+  }catch(err){
+    const b = $('apiBanner');
+    if(!b) return;
+    b.innerHTML = ic('info') +
+      '<div><b>Koneksi ke server Google Apps Script gagal.</b>' +
+      esc(err.message) +
+      '<small>Checklist: 1) GAS_API_URL di index.html = URL /exec dari Manage deployments &nbsp;2) Deployment "Who has access: Anyone" &nbsp;3) Code.gs sudah di-deploy ulang (New version) &nbsp;4) Cek manual: buka URL /exec?action=ping di browser — harus muncul JSON "version":"V2".</small></div>';
+    b.classList.add('show');
+  }
 }
 
 /* =========================================================
@@ -1136,7 +1208,7 @@ const state = {
 };
 
 /* =========================================================
-   TOAST / LOADING HELPERS
+   LOADING HELPERS
    ========================================================= */
 const loadingHTML = '<div class="empty-note"><span class="dots"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></span><span>Memuat data…</span></div>';
 const errorHTML = msg => '<div class="empty-note">' + ic('info') + '<span>' + esc(msg) + '</span></div>';
@@ -1245,7 +1317,7 @@ function setupSlideshow(root, view){
         const img = new Image();
         img.className = 'slide-img';
         img.src = s.src; img.alt = '';
-        img.onerror = ()=>{ img.remove(); if(this.slides.length) this.show(this.idx+1); };
+        img.onerror = ()=>{ img.remove(); if(this.slides.length > 1) this.show(this.idx+1); };
         vp.insertAdjacentElement('afterbegin', img);
         this._progress(IMAGE_SLIDE_MS);
         this.timer = setTimeout(()=>this.show(this.idx+1), IMAGE_SLIDE_MS);
@@ -1330,7 +1402,6 @@ function setupSlideshow(root, view){
     const d = e.target.closest('.dot'); if(d) api.show(+d.dataset.slide);
   });
 
-  // Swipe di perangkat sentuh
   let tsx=0, tsy=0;
   vp.addEventListener('touchstart', e=>{ tsx=e.touches[0].clientX; tsy=e.touches[0].clientY; }, {passive:true});
   vp.addEventListener('touchend', e=>{
@@ -1338,7 +1409,6 @@ function setupSlideshow(root, view){
     if(Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)*1.5){ dx < 0 ? api.next() : api.prev(); }
   }, {passive:true});
 
-  // Hover: pause hanya untuk slide gambar (video terus berjalan sesuai durasinya)
   vp.addEventListener('mouseenter', ()=>{ api.pauseImg(); pauseAutoToggle(view); });
   vp.addEventListener('mouseleave', ()=>{ api.resumeImg(); resumeAutoToggle(view); });
 
@@ -1382,7 +1452,7 @@ function moveIndicator(view){
 }
 
 /* =========================================================
-   RENDER MENU (dipakai Hari Ini & Detail Riwayat)
+   RENDER MENU (Hari Ini & Detail Riwayat)
    ========================================================= */
 const VF = {
   today: { date:'todayDate', name:'todayName', desc:'todayDesc', badge:'todayRatingBadge', avg:'todayRatingAvg', cnt:'todayRatingCount', card:'menuCard', del:'delTodayBtn', pre:'today' },
@@ -1459,7 +1529,6 @@ function renderPorsiTotal(view, menu, p){
     ic('users') + '<div><div class="num">' + n + '</div><div class="lbl">Porsi ' + (isB?'Besar':'Kecil') + ' Didistribusikan</div></div>';
 }
 
-/* ===== Detail collapse ===== */
 function syncDetailBody(view){
   const body = $('detailBody-'+view);
   if(body && !body.classList.contains('collapsed')) body.style.maxHeight = body.scrollHeight + 'px';
@@ -1730,7 +1799,7 @@ async function confirmDelete(id){
     confirmButtonColor:'#d95757', reverseButtons:true
   });
   if(!r.isConfirmed) return false;
-  const res = await callApi('deletemenu', {id:id, username:state.admin.username, password:state.admin.password});
+  const res = await callApi('deletemenu', {id:id, username:state.admin.username, password:state.admin.password, enforce_age_days:3});
   if(res && res.success){
     Toast.fire({icon:'success', title:res.message || 'Menu dihapus.'});
     return true;
@@ -1777,8 +1846,9 @@ function applyAdminUI(){
   } else {
     lb.innerHTML = ic('logIn') + '<span>Login Admin</span>';
   }
-  if(state.menuToday){ refreshRatingAdmin('today'); loadHistory(true).then(()=>{}); }
+  if(state.menuToday){ refreshRatingAdmin('today'); }
   if(state.menuHist) refreshRatingAdmin('hist');
+  if(state.histLoaded) loadHistory(true);
 }
 function doLogin(){
   const u = $('loginUser').value.trim(), p = $('loginPass').value;
@@ -1799,7 +1869,7 @@ function doLogin(){
       msg.classList.add('err');
     }
   }).catch(err=>{
-    msg.textContent = 'Server tidak membalas JSON. Pastikan membuka URL /exec.';
+    msg.textContent = err.message;
     msg.classList.add('err');
   }).finally(()=>{ btn.disabled = false; });
 }
@@ -1905,7 +1975,7 @@ async function saveMenu(){
     instansi:instansi,
     besar: buildPortion('besar'), kecil: buildPortion('kecil')
   };
-  Swal.fire({ title:'Menyimpan menu…', didOpen:()=>Swal.showLoading(), allowOutsideClick:false, allowEscapeKey:false });
+  Swal.fire({ title:'Menyimpan menu… (mohon tunggu, media diunggah)', didOpen:()=>Swal.showLoading(), allowOutsideClick:false, allowEscapeKey:false });
   try{
     const res = await callApi('savemenu', payload);
     Swal.close();
@@ -1931,17 +2001,14 @@ async function saveMenu(){
    INIT & BINDINGS
    ========================================================= */
 function init(){
-  // Suntik ikon statis
   document.querySelectorAll('[data-icon]').forEach(el=>{ el.innerHTML = I[el.dataset.icon] || ''; });
 
-  // Tabs & bottom nav
   document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
   document.querySelectorAll('[data-action="manage"]').forEach(b=>b.addEventListener('click', ()=>{
     if(!state.admin){ openModal($('loginModal')); Toast.fire({icon:'info', title:'Login admin terlebih dahulu'}); return; }
     resetMenuForm(); openModal($('menuModal'));
   }));
 
-  // Tombol header
   $('adminAddBtn').addEventListener('click', ()=>{ resetMenuForm(); openModal($('menuModal')); });
   $('loginBtn').addEventListener('click', ()=>{ state.admin ? doLogout() : openModal($('loginModal')); });
   $('loginSubmit').addEventListener('click', doLogin);
@@ -1953,17 +2020,14 @@ function init(){
     b.innerHTML = ic(show ? 'eyeOff' : 'eye');
   }));
 
-  // Modal close (overlay + tombol)
   document.querySelectorAll('.modal-overlay').forEach(ov=>{
     ov.addEventListener('click', e=>{ if(e.target === ov) closeModal(ov); });
   });
   document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click', ()=>closeModal(b.closest('.modal-overlay'))));
 
-  // Slideshow (kedua view)
   setupSlideshow($('slideshow-today'), 'today');
   setupSlideshow($('slideshow-hist'), 'hist');
 
-  // Tombol porsi
   ['today','hist'].forEach(v=>{
     const wrap = $('portionToggleWrap-'+v);
     wrap.querySelectorAll('.seg-btn').forEach(b=>b.addEventListener('click', ()=>setPortion(v, b.dataset.portion)));
@@ -1972,10 +2036,8 @@ function init(){
     bindCollapse(v);
   });
 
-  // Rating (kedua view)
   initRating('today'); initRating('hist');
 
-  // Riwayat: klik kartu & tombol hapus (event delegation)
   $('histList').addEventListener('click', async e=>{
     const del = e.target.closest('.hist-del');
     if(del){
@@ -2000,11 +2062,9 @@ function init(){
     if(ok){ state.histLoaded = false; loadToday(); }
   });
 
-  // Form menu: instansi
   $('addInstansiRow').addEventListener('click', ()=>addInstansiRow());
   $('mShowInstansi').addEventListener('change', e=>{ $('instansiSection').style.display = e.target.checked ? '' : 'none'; });
 
-  // Form menu: upload foto (per porsi)
   ['besar','kecil'].forEach(p=>{
     $('mImg-'+p).addEventListener('change', async e=>{
       const files = Array.from(e.target.files||[]);
@@ -2020,7 +2080,6 @@ function init(){
       e.target.value = '';
       renderMediaPreviews(p);
     });
-    // Form menu: upload video + validasi durasi otomatis
     $('mVid-'+p).addEventListener('change', async e=>{
       const f = e.target.files[0];
       if(!f) return;
@@ -2047,7 +2106,6 @@ function init(){
     });
   });
 
-  // Hapus media preview (delegasi)
   $('menuModal').addEventListener('click', e=>{
     const rmImg = e.target.closest('[data-rmimg]');
     if(rmImg){
@@ -2063,14 +2121,13 @@ function init(){
   });
   $('menuSaveBtn').addEventListener('click', saveMenu);
 
-  // Resize: re-posisi indikator & tinggi detail
   window.addEventListener('resize', ()=>{
     ['today','hist'].forEach(v=>{ moveIndicator(v); syncDetailBody(v); });
   });
   window.addEventListener('load', ()=>{ ['today','hist'].forEach(moveIndicator); });
 
-  // Mulai
   restoreAdmin();
+  checkApiConnection(); // diagnosa koneksi → banner error jelas jika gagal
   loadToday();
 }
 
