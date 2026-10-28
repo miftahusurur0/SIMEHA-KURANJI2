@@ -2305,140 +2305,247 @@ body.is-admin .admin-only { display: flex; }
 }
 
 /* ============================================================
-   LOGIN MODAL — polished, refined, with thoughtful details
-   Designer focus: clear hierarchy, friendly welcome, password
-   show/hide button accessible, hint for default credentials,
-   subtle visual cues that guide the eye.
+   LOGIN MODAL — modern, animated, professional
+   Designer focus: gradient header band with shimmer sweep,
+   floating shield avatar, input with leading icon,
+   smooth stagger entrance, micro-interactions everywhere.
    ============================================================ */
+
+/* Animations dedicated to login */
+@keyframes loginShimmer {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  100% { transform: translateX(220%) skewX(-20deg); }
+}
+@keyframes avatarDrop {
+  0% { transform: translateY(-30px) scale(0.6); opacity: 0; }
+  60% { transform: translateY(6px) scale(1.05); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes avatarPulse {
+  0%, 100% { box-shadow: 0 8px 22px rgba(15, 118, 110, 0.35), 0 0 0 0 rgba(15, 118, 110, 0.4); }
+  50% { box-shadow: 0 8px 22px rgba(15, 118, 110, 0.45), 0 0 0 8px rgba(15, 118, 110, 0); }
+}
+@keyframes loginFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes loginTitleGlow {
+  0%, 100% { text-shadow: 0 0 0 transparent; }
+  50% { text-shadow: 0 0 14px rgba(255, 255, 255, 0.25); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-8px); }
+  30% { transform: translateX(7px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+
 #loginModal .modal {
   max-width: 440px;
   padding: 0;
   overflow: hidden;
-}
-/* Header band — solid color block to anchor the modal */
-#loginModal .modal > h2,
-#loginModal .modal > .sub,
-#loginModal .modal > .close-x,
-#loginModal .modal > .modal-body {
-  /* will be wrapped in login-modal-inner via CSS layering */
-}
-#loginModal .modal {
   position: relative;
+  /* Tweak entrance: subtle bounce */
+  animation: scaleIn 0.28s var(--ease-spring) both;
 }
-/* Top band — single accent block, calm not flashy */
-#loginModal .modal::before {
+
+/* ---------- Header band ---------- */
+#loginModal .login-header {
+  position: relative;
+  padding: 32px 24px 56px;
+  background:
+    linear-gradient(135deg, var(--ink) 0%, var(--primary-active) 65%, var(--primary) 100%);
+  overflow: hidden;
+  text-align: center;
+}
+/* Decorative glow blob behind avatar */
+#loginModal .login-header::before {
   content: "";
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 65%);
+  pointer-events: none;
+}
+/* Shimmer sweep — slow, subtle */
+#loginModal .login-shimmer {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  height: 96px;
-  background: linear-gradient(135deg, var(--ink) 0%, var(--primary-active) 100%);
-  z-index: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 45%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0.08) 55%,
+    transparent 100%
+  );
+  pointer-events: none;
+  animation: loginShimmer 4.5s var(--ease) infinite;
+  animation-delay: 1.2s;
 }
-#loginModal .modal > * { position: relative; z-index: 1; }
-#loginModal .modal .close-x {
-  background: rgba(255, 255, 255, 0.16);
+
+/* Shield avatar */
+#loginModal .login-avatar {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--primary), var(--primary-active));
+  border: 3px solid var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.25);
+  animation: avatarDrop 0.55s var(--ease-spring) both, avatarPulse 3s var(--ease) 0.6s infinite;
+  z-index: 2;
 }
-#loginModal .modal .close-x:hover {
-  background: rgba(255, 255, 255, 0.28);
-  color: #fff;
+#loginModal .login-avatar svg {
+  width: 30px;
+  height: 30px;
 }
-/* Login icon container — replaces inline icon in heading */
-#loginModal .modal h2 {
-  color: #fff;
-  margin: 0;
-  padding: 24px 24px 4px;
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: var(--tracking-tight);
-}
-#loginModal .modal h2 .icon {
-  display: none; /* hide default inline icon — we use a shield avatar */
-}
-#loginModal .modal .sub {
-  color: rgba(255, 255, 255, 0.72);
-  margin: 0 0 0;
-  padding: 0 24px 28px;
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-/* Login avatar — shield icon in a circular badge */
-#loginModal .modal::after {
+/* Subtle rotating ring around avatar */
+#loginModal .login-avatar::after {
   content: "";
   position: absolute;
-  top: 56px;
-  left: 24px;
-  width: 56px;
-  height: 56px;
+  inset: -6px;
   border-radius: 50%;
-  background: var(--primary);
-  border: 3px solid var(--surface);
-  z-index: 2;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 26px;
-  box-shadow: var(--shadow-md);
+  border: 1.5px dashed rgba(255, 255, 255, 0.2);
+  animation: spin 14s linear infinite;
 }
-/* Push body content below the band */
-#loginModal .modal .modal-body,
-#loginModal .modal .field,
-#loginModal .modal .modal-actions,
-#loginModal .modal .modal-msg,
-#loginModal .login-form,
-#loginModal .login-hint {
+
+#loginModal .login-title {
+  margin: 0 0 4px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
   position: relative;
+  z-index: 2;
+  animation: loginFadeUp 0.45s var(--ease) 0.15s both, loginTitleGlow 4s ease-in-out 1s infinite;
 }
-#loginModal .modal .modal-body {
-  padding: 36px 24px 0;
-}
-#loginModal .modal .modal-actions {
-  padding: 14px 24px 20px;
-  margin-top: 8px;
-  border-top: none;
-}
-#loginModal .modal .modal-msg {
-  padding: 0 24px 16px;
-  margin-top: 0;
+#loginModal .login-sub {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
   font-size: 12.5px;
-  min-height: 18px;
-  color: var(--danger);
+  line-height: 1.55;
+  position: relative;
+  z-index: 2;
+  animation: loginFadeUp 0.45s var(--ease) 0.25s both;
+  padding: 0 12px;
 }
-/* Tighter fields in login modal */
-#loginModal .field {
+
+/* Close button — sits on header, glassy */
+#loginModal .close-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  z-index: 5;
+}
+#loginModal .close-x:hover {
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+/* ---------- Body ---------- */
+#loginModal .login-body {
+  padding: 22px 24px 0;
+  position: relative;
+  z-index: 3;
+}
+/* Stagger entrance for fields */
+#loginModal .login-field {
   margin-bottom: 14px;
+  animation: loginFadeUp 0.4s var(--ease) both;
 }
-#loginModal .field label {
-  font-size: 11.5px;
-  font-weight: 600;
+#loginModal .login-field:nth-child(1) { animation-delay: 0.35s; }
+#loginModal .login-field:nth-child(2) { animation-delay: 0.45s; }
+
+#loginModal .login-field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: var(--tracking-mono);
   text-transform: uppercase;
   color: var(--ink-3);
   margin-bottom: 6px;
 }
-#loginModal .field label .icon { display: none; }
-#loginModal .field input {
-  padding: 12px 14px;
+#loginModal .login-field label .icon { display: none; }
+
+/* Input wrapper with leading icon */
+#loginModal .input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+#loginModal .input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-4);
+  pointer-events: none;
+  transition: color var(--transition);
+}
+#loginModal .input-icon .icon { width: 16px; height: 16px; }
+#loginModal .input-wrap input {
+  width: 100%;
+  padding: 13px 14px 13px 40px;  /* left space for icon */
   font-size: 14.5px;
   background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+  color: var(--ink);
+  min-width: 0;
 }
-#loginModal .password-wrap {
-  position: relative;
+#loginModal .input-wrap input::placeholder {
+  color: var(--ink-4);
 }
+/* Focus: lift border + glow + tint leading icon */
+#loginModal .input-wrap input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--primary-tint);
+}
+#loginModal .input-wrap:focus-within .input-icon {
+  color: var(--primary);
+}
+
+/* Password field: add right padding for toggle */
 #loginModal .password-wrap input {
   padding-right: 46px;
 }
 #loginModal .toggle-pass {
   position: absolute;
-  right: 6px;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border: none;
   background: transparent;
   color: var(--ink-3);
@@ -2447,60 +2554,121 @@ body.is-admin .admin-only { display: flex; }
   justify-content: center;
   border-radius: var(--radius-xs);
   transition: var(--transition);
+  cursor: pointer;
 }
 #loginModal .toggle-pass:hover {
   background: var(--surface-hover);
-  color: var(--ink);
+  color: var(--primary);
 }
-#loginModal .toggle-pass .icon { width: 16px; height: 16px; }
-/* Login hint — default credentials note */
-#loginModal .login-hint {
-  margin-top: -4px;
-  margin-bottom: 6px;
-  padding: 9px 12px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border);
-  border-radius: var(--radius-xs);
-  font-size: 11.5px;
-  color: var(--ink-2);
+#loginModal .toggle-pass:active { transform: translateY(-50%) scale(0.92); }
+#loginModal .toggle-pass .icon { width: 17px; height: 17px; }
+
+/* Login message — error / status */
+#loginModal .modal-msg {
+  padding: 0 4px 8px;
+  margin-top: 0;
+  font-size: 12.5px;
+  min-height: 18px;
+  color: var(--danger);
+  transition: opacity 0.2s var(--ease);
+  animation: loginFadeUp 0.3s var(--ease) 0.55s both;
+}
+#loginModal .modal-msg:empty { min-height: 0; padding-bottom: 0; }
+
+/* ---------- Actions ---------- */
+#loginModal .login-actions {
+  padding: 6px 24px 22px;
+  margin-top: 4px;
+  border-top: none;
   display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  line-height: 1.5;
+  gap: 8px;
+  animation: loginFadeUp 0.4s var(--ease) 0.55s both;
 }
-#loginModal .login-hint .icon {
-  width: 13px;
-  height: 13px;
-  color: var(--accent);
-  flex-shrink: 0;
-  margin-top: 1px;
+#loginModal .btn-ghost {
+  flex: 0 0 auto;
 }
-#loginModal .login-hint code {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  background: var(--surface);
-  padding: 1px 6px;
-  border-radius: 4px;
-  color: var(--ink);
-  border: 1px solid var(--line);
-}
-/* Login button — full width, prominent */
 #loginModal #loginSubmit {
   flex: 1;
   width: 100%;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
 }
-#loginModal .modal-actions {
-  display: flex;
-  gap: 8px;
+/* Shimmer sweep on submit button (idle) */
+#loginModal #loginSubmit::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.18),
+    transparent
+  );
+  transition: left 0.6s var(--ease);
 }
-#loginModal .modal-actions .btn-ghost {
-  flex: 0 0 auto;
+#loginModal #loginSubmit:hover::after {
+  left: 150%;
 }
-/* Loading state — pulse animation on submit button */
+/* Loading state */
 #loginModal #loginSubmit:disabled {
-  opacity: 0.7;
+  opacity: 0.85;
   cursor: wait;
+}
+#loginModal #loginSubmit:disabled::after {
+  display: none;
+}
+#loginModal #loginSubmit .icon {
+  transition: transform 0.3s var(--ease);
+}
+#loginModal #loginSubmit:hover .icon {
+  transform: translateX(2px);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+  #loginModal .modal { max-width: 100%; }
+  #loginModal .login-header { padding: 28px 20px 52px; }
+  #loginModal .login-avatar { width: 58px; height: 58px; }
+  #loginModal .login-avatar svg { width: 26px; height: 26px; }
+  #loginModal .login-title { font-size: 18px; }
+  #loginModal .login-sub { font-size: 12px; padding: 0 6px; }
+  #loginModal .login-body { padding: 20px 20px 0; }
+  #loginModal .login-actions { padding: 6px 20px 20px; }
+  #loginModal .input-wrap input {
+    padding: 12px 12px 12px 38px;
+    font-size: 14px;
+  }
+  #loginModal .input-icon { left: 11px; }
+  #loginModal .password-wrap input { padding-right: 44px; }
+  #loginModal .toggle-pass { width: 34px; height: 34px; right: 3px; }
+}
+@media (max-width: 360px) {
+  #loginModal .login-header { padding: 24px 16px 48px; }
+  #loginModal .login-title { font-size: 17px; }
+  #loginModal .login-sub { font-size: 11.5px; }
+  #loginModal .login-body { padding: 18px 16px 0; }
+  #loginModal .login-actions { padding: 6px 16px 18px; gap: 6px; }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  #loginModal .login-shimmer,
+  #loginModal .login-avatar,
+  #loginModal .login-avatar::after,
+  #loginModal .login-title,
+  #loginModal .login-sub,
+  #loginModal .login-field,
+  #loginModal .login-actions,
+  #loginModal .modal-msg,
+  #loginModal #loginSubmit::after,
+  #loginModal #loginSubmit .icon {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* Print modal */
@@ -2938,25 +3106,41 @@ body, header.board, .menu-card, .instansi-card, .rating-card, .hist-card,
 <div class="modal-overlay" id="loginModal">
   <div class="modal">
     <button class="close-x" data-close type="button" aria-label="Tutup"><span class="icon" data-icon="x"></span></button>
-    <h2><span class="icon" data-icon="shield"></span>Login Admin</h2>
-    <p class="sub">Masuk untuk mengelola menu, distribusi, dan melihat detail penilaian.</p>
-    <div class="modal-body">
-      <div class="field">
-        <label><span class="icon" data-icon="users"></span>Username</label>
-        <input id="loginUser" autocomplete="username" placeholder="masukkan username admin" autocapitalize="none" autocorrect="off" spellcheck="false">
+
+    <!-- Header band dengan gradient + animasi -->
+    <div class="login-header">
+      <div class="login-shimmer"></div>
+      <div class="login-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+          <path d="M9 12l2 2 4-4" opacity="0.6"/>
+        </svg>
       </div>
-      <div class="field">
-        <label><span class="icon" data-icon="shield"></span>Password</label>
-        <div class="password-wrap pass-wrap">
+      <h2 class="login-title">Selamat Datang</h2>
+      <p class="login-sub">Masuk ke akun admin untuk mengelola menu, distribusi, dan penilaian.</p>
+    </div>
+
+    <div class="modal-body login-body">
+      <div class="field login-field">
+        <label for="loginUser"><span class="icon" data-icon="users"></span>Username</label>
+        <div class="input-wrap">
+          <span class="input-icon"><span class="icon" data-icon="users"></span></span>
+          <input id="loginUser" autocomplete="username" placeholder="masukkan username" autocapitalize="none" autocorrect="off" spellcheck="false">
+        </div>
+      </div>
+      <div class="field login-field">
+        <label for="loginPass"><span class="icon" data-icon="shield"></span>Password</label>
+        <div class="password-wrap pass-wrap input-wrap">
+          <span class="input-icon"><span class="icon" data-icon="shield"></span></span>
           <input id="loginPass" type="password" autocomplete="current-password" placeholder="masukkan password">
           <button class="toggle-pass" type="button" data-target="loginPass" aria-label="Tampilkan password"><span class="icon" data-icon="eye"></span></button>
         </div>
       </div>
       <div class="modal-msg" id="loginMsg"></div>
     </div>
-    <div class="modal-actions">
+    <div class="modal-actions login-actions">
       <button class="btn btn-ghost" data-close type="button">Batal</button>
-      <button class="btn btn-primary" id="loginSubmit" type="button"><span class="icon" data-icon="logIn"></span>Masuk</button>
+      <button class="btn btn-primary" id="loginSubmit" type="button"><span class="icon" data-icon="logIn"></span><span class="btn-text">Masuk</span></button>
     </div>
   </div>
 </div>
@@ -4258,11 +4442,32 @@ function doLogin(){
   const u = $('loginUser').value.trim(), p = $('loginPass').value;
   const msg = $('loginMsg');
   msg.className = 'modal-msg';
-  if(!u || !p){ msg.textContent = 'Username dan password wajib diisi.'; msg.classList.add('err'); return; }
+  if(!u || !p){
+    msg.textContent = 'Username dan password wajib diisi.';
+    msg.classList.add('err');
+    // Shake animation feedback on empty submit
+    const modal = document.querySelector('#loginModal .modal');
+    if(modal){
+      modal.style.animation = 'none';
+      void modal.offsetWidth;
+      modal.style.animation = 'shake 0.4s var(--ease)';
+    }
+    return;
+  }
   const btn = $('loginSubmit');
-  const origLabel = btn.innerHTML;
+  const btnText = btn.querySelector('.btn-text');
+  const origText = btnText ? btnText.textContent : 'Masuk';
   btn.disabled = true;
-  btn.innerHTML = '<span class="icon" style="animation:spin 0.8s linear infinite">' + I.sync + '</span>Memeriksa…';
+  if(btnText){
+    btnText.textContent = 'Memeriksa…';
+  }
+  // Swap login icon to spinner
+  const btnIcon = btn.querySelector('.icon');
+  const origIconHTML = btnIcon ? btnIcon.innerHTML : '';
+  if(btnIcon){
+    btnIcon.innerHTML = I.sync || '';
+    btnIcon.style.animation = 'spin 0.8s linear infinite';
+  }
   msg.textContent = '';
   msg.classList.remove('err');
   callApi('login', {username:u, password:p}).then(res=>{
@@ -4275,11 +4480,25 @@ function doLogin(){
     } else {
       msg.textContent = (res && res.message) || 'Login gagal.';
       msg.classList.add('err');
+      // Shake on failed login
+      const modal = document.querySelector('#loginModal .modal');
+      if(modal){
+        modal.style.animation = 'none';
+        void modal.offsetWidth;
+        modal.style.animation = 'shake 0.45s var(--ease)';
+      }
     }
   }).catch(err=>{
     msg.textContent = 'Server tidak membalas JSON. Pastikan membuka URL /exec.';
     msg.classList.add('err');
-  }).finally(()=>{ btn.disabled = false; btn.innerHTML = origLabel; });
+  }).finally(()=>{
+    btn.disabled = false;
+    if(btnText) btnText.textContent = origText;
+    if(btnIcon){
+      btnIcon.innerHTML = origIconHTML;
+      btnIcon.style.animation = '';
+    }
+  });
 }
 function doLogout(){
   Swal.fire({
@@ -5149,7 +5368,28 @@ function init(){
     const inp = $(b.dataset.target);
     const show = inp.type === 'password';
     inp.type = show ? 'text' : 'password';
-    b.innerHTML = ic(show ? 'eyeOff' : 'eye');
+    // Smooth crossfade: fade out, swap, fade in
+    const iconEl = b.querySelector('.icon');
+    if(iconEl){
+      iconEl.style.transition = 'opacity 0.15s var(--ease), transform 0.2s var(--ease)';
+      iconEl.style.opacity = '0';
+      iconEl.style.transform = 'scale(0.6) rotate(-30deg)';
+      setTimeout(()=>{
+        b.innerHTML = ic(show ? 'eyeOff' : 'eye');
+        const newIcon = b.querySelector('.icon');
+        if(newIcon){
+          newIcon.style.opacity = '0';
+          newIcon.style.transform = 'scale(0.6) rotate(30deg)';
+          requestAnimationFrame(()=>{
+            newIcon.style.opacity = '1';
+            newIcon.style.transform = 'scale(1) rotate(0deg)';
+          });
+        }
+      }, 150);
+    } else {
+      b.innerHTML = ic(show ? 'eyeOff' : 'eye');
+    }
+    b.setAttribute('aria-label', show ? 'Sembunyikan password' : 'Tampilkan password');
   }));
 
   // Modal close (overlay + tombol)
